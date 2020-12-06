@@ -18,7 +18,7 @@ def issue_to_excel_row(issue: Issue, commit_sha: str) -> dict:
         "id": issue.id,
         "number": issue.number,
         "repoName": issue.repository.name,
-        "related_commit": commit_sha,
+        "relatedCommit": commit_sha,
         "url": "https://github.com/{}/issues/{}".format(issue.repository.full_name, issue.number),
         "api_url": issue.url,
         "title": issue.title
