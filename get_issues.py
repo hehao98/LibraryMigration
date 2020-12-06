@@ -1,10 +1,14 @@
+import os
 import time
+import logging
 import pandas as pd
 from github import Github, Issue
-from github.GithubException import RateLimitExceededException
 
 
 def get_tokens(token_file: str) -> list:
+    if not os.path.exists(token_file):
+        logging.error("Please put GitHub Tokens in {} for this script to work".format(token_file))
+        return []
     with open(token_file, "r") as f:
         return list(x.strip() for x in f.readlines())
 
@@ -21,15 +25,15 @@ def issue_to_excel_row(issue: Issue, commit_sha: str) -> dict:
     }
 
 
-if __name__ == "__main__":
+def run():
     tokens = get_tokens("tokens.txt")
-    print("GitHub tokens: {}".format(tokens))
+    logging.info("GitHub tokens: {}".format(tokens))
 
     gh = Github(tokens[0])
     migrations = pd.read_excel("data/migrations.xlsx")
     commits = set(migrations["startCommit"]) | set(migrations["endCommit"])
     repo_names = set(map(lambda x: x.replace("_", "/"),  migrations["repoName"]))
-    print("{} repositories, {} commits".format(len(repo_names), len(commits)))
+    logging.info("{} repositories, {} commits".format(len(repo_names), len(commits)))
 
     """
     repos = dict()
@@ -43,17 +47,17 @@ if __name__ == "__main__":
     """
 
     issue_list = []
-    for commit in commits:
-        print("Commit: {}".format(commit))
+    for idx, commit in enumerate(commits):
+        logging.info("Commit {}/{}: {}".format(idx + 1, len(commits), commit))
         while True:
             try:
                 for issue in gh.search_issues("SHA:{}".format(commit)):
-                    print("    {} {} {}".format(issue.id, issue.number, issue.repository.full_name, gh.rate_limiting))
+                    logging.info("  {} {} {} {}".format(issue.id, issue.number, issue.repository.full_name, gh.rate_limiting))
                     issue_list.append(issue_to_excel_row(issue, commit))
                 break
-            except RateLimitExceededException as ex:
-                print("    {}".format(ex))
-                print("    wait for 60 seconds...")
+            except Exception as ex:
+                logging.error("  {}".format(ex))
+                logging.info("  wait for 60 seconds...")
                 time.sleep(60)
 
     pd.DataFrame(issue_list).to_excel("data/issues.xlsx", index=False)
