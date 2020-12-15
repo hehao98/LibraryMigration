@@ -44,7 +44,8 @@ def run():
         while True:
             try:
                 for issue in gh.search_issues("SHA:{}".format(commit)):
-                    logging.info("  {} {} {} {}".format(issue.id, issue.number, issue.repository.full_name, gh.rate_limiting))
+                    logging.info("  {} {} {} {}".format(
+                        issue.id, issue.number, issue.repository.full_name, gh.rate_limiting))
                     issue_list.append(issue_to_excel_row(issue, commit))
                 break
             except Exception as ex:
