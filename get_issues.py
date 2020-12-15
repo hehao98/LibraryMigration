@@ -1,16 +1,8 @@
-import os
 import time
 import logging
 import pandas as pd
 from github import Github, Issue
-
-
-def get_tokens(token_file: str) -> list:
-    if not os.path.exists(token_file):
-        logging.error("Please put GitHub Tokens in {} for this script to work".format(token_file))
-        return []
-    with open(token_file, "r") as f:
-        return list(x.strip() for x in f.readlines())
+from util import get_tokens
 
 
 def issue_to_excel_row(issue: Issue, commit_sha: str) -> dict:

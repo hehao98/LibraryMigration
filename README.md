@@ -46,7 +46,6 @@ and represents some level of *patterned* response or meaning with in the dataset
 5. Defining and naming themes (and/or sub-themes). Answering "So what?".
 6. Producing the report.
 
-
 ### Text for Analysis
 
 We have three kind of text to analyze: commit messages, issues, and PRs.
