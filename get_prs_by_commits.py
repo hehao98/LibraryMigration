@@ -38,6 +38,7 @@ def run():
         repos[repo_name]["commit"].update((commit1, commit2))
     """
 
+    # Although it looks like we are retrieving issues, actually all we get are PRs!
     issue_list = []
     for idx, commit in enumerate(commits):
         logging.info("Commit {}/{}: {}".format(idx + 1, len(commits), commit))
@@ -53,4 +54,4 @@ def run():
                 logging.info("  wait for 60 seconds...")
                 time.sleep(60)
 
-    pd.DataFrame(issue_list).to_excel("data/issues.xlsx", index=False)
+    pd.DataFrame(issue_list).to_excel("data/prs.xlsx", index=False)

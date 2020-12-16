@@ -13,8 +13,8 @@ Please configure your PyCharm to use a new Conda environment with Python 3.7+ an
 
 A dataset of library migration is already available [here](data/migrations.xlsx).
 The more compact dataset of legal library migration rules is [here](data/rules.xlsx).
-We use [get_issues.py](get_issues.py) Python script to get issues and PRs [here](data/issues.xlsx).
-We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding.xlsx).
+We use [get_issues.py](get_prs_by_commits.py) Python script to get issues and PRs [here](data/prs.xlsx).
+We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx).
 
 ## Thematic Analysis
 
