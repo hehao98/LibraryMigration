@@ -3,3 +3,4 @@ xlrd
 openpyxl
 pandas
 PyGithub
+pymongo

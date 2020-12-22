@@ -1,15 +1,25 @@
 import os
 import re
 import logging
-from typing import List, Tuple
+import pymongo
+import pandas as pd
+from typing import List, Tuple, Set
+
+
+MONGO_URL = "mongodb://127.0.0.1:27017"
 
 
 def get_tokens(token_file: str) -> List[str]:
+    """
+    Get a list of GitHub tokens from the supplied file. Assumes one token each line, and ignores blank line.
+    :param token_file: path to the token file
+    :return: A list of GitHub tokens
+    """
     if not os.path.exists(token_file):
         logging.error("Please put GitHub Tokens in {} for this script to work".format(token_file))
         return []
     with open(token_file, "r") as f:
-        return list(x.strip() for x in f.readlines())
+        return list(x.strip() for x in f.readlines() if x.strip() != "")
 
 
 def get_commit_link(repo_name: str, commit_sha: str) -> str:
@@ -51,8 +61,34 @@ def get_issues_in_text(repo_name: str, text: str) -> List[Tuple[str, int]]:
     return result
 
 
+def select_projects_from_libraries_io() -> pd.DataFrame:
+    if os.path.exists("cache/projects.csv"):
+        return pd.read_csv("cache/projects.csv")
+    db = pymongo.MongoClient(MONGO_URL).migration_helper
+    projects = pd.DataFrame(db.lioProject.find())
+    projects.to_csv("cache/projects.csv", index=False)
+    return projects
+
+
+def select_libraries_from_libraries_io() -> pd.DataFrame:
+    if os.path.exists("cache/libraries.csv"):
+        return pd.read_csv("cache/libraries.csv")
+    db = pymongo.MongoClient(MONGO_URL).migration_helper
+    libraries = pd.DataFrame(db.lioProject.find({"dependentRepositoriesCount": {"$ge": 10}}))
+    libraries.to_csv("cache/libraries.csv", index=False)
+    return libraries
+
+
+def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
+    rules = pd.read_excel("data/rules.xlsx")
+    return rules[rules["fromLib"].isin(valid_libs) & rules["toLib"].isin(valid_libs)]
+
+
 if __name__ == "__main__":
     res = get_issues_in_text("a/a", "cc#23 is abc GH-32 where abc/def#222 and a-c/D.f#333" +
                              " https://github.com/abc/def/issues/4444 sadwec " +
                              "https://github.com/abc./def-_/pull/5555")
     print(res)
+    print(select_libraries_from_libraries_io())
+    print(select_projects_from_libraries_io())
+    print(select_rules(set(select_libraries_from_libraries_io()["name"])))
