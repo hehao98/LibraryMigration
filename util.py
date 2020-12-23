@@ -130,9 +130,12 @@ def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) ->
         os.mkdir("cache")
 
     db = pymongo.MongoClient(MONGO_URL).migration_helper
+    commits_non_merge = set(c["_id"] for c in select_commits_by_project(project_name) if len(c["parents"]) < 2)
     results = []
     for dep_seq in db.wocDepSeq3.find({"repoName": project_name.replace("/", "_")}):
         for item in dep_seq["seq"]:
+            if item["commit"] not in commits_non_merge:
+                continue
             for change in item["versionChanges"]:
                 row = {
                     "project": project_name,
@@ -144,17 +147,22 @@ def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) ->
                     "ver1": "",
                     "ver2": "",
                 }
-                if change.startswith("+"):
-                    row["type"] = "add"
-                    row["lib2"], row["ver2"] = change[1:].split(" ")
-                elif change.startswith("-"):
-                    row["type"] = "rem"
-                    row["lib1"], row["ver1"] = change[1:].split(" ")
-                elif change.startswith(" "):
-                    row["type"] = "verchg"
-                    row["lib1"] = row["lib2"] = change[1:].split(" ")[0]
-                    row["ver1"], row["ver2"] = change[1:].split(" ")[1].split("->")
-                results.append(row)
+                try:
+                    if change.startswith("+"):
+                        row["type"] = "add"
+                        row["lib2"], row["ver2"] = change[1:].split(" ")[0:2]
+                    elif change.startswith("-"):
+                        row["type"] = "rem"
+                        row["lib1"], row["ver1"] = change[1:].split(" ")[0:2]
+                    elif change.startswith(" "):
+                        row["type"] = "verchg"
+                        row["lib1"] = row["lib2"] = change[1:].split(" ")[0]
+                        row["ver1"], row["ver2"] = "".join(change[1:].split(" ")[1:]).split("->")
+                    results.append(row)
+                except ValueError as e:
+                    logging.error(f"Error while parsing \"{change}\": {e}")
+    if len(results) == 0:
+        return None
     results = pd.DataFrame(results).fillna("")
     results.to_csv(cache_path, index=False)
     if valid_libs is not None:
@@ -163,8 +171,10 @@ def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) ->
     return results
 
 
-def plot_distribution(data: Iterable[any], file: str) -> None:
-    pass
+def select_commits_by_project(project_name: str) -> List[dict]:
+    db = pymongo.MongoClient(MONGO_URL).migration_helper
+    commit_shas = list(db.wocRepository.find_one({"name": project_name.replace("/", "_")})["commits"])
+    return list(db.wocCommit.find({"_id": {"$in": commit_shas}}))
 
 
 if __name__ == "__main__":
@@ -180,3 +190,6 @@ if __name__ == "__main__":
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
     print(select_dependency_changes("square/okhttp"))
     print(select_dependency_changes("square/okhttp", set(select_libraries_from_libraries_io()["name"])))
+    print(select_dependency_changes("bumptech/glide"))
+    print(select_dependency_changes("dropwizard/dropwizard"))
+

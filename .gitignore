@@ -3,3 +3,5 @@
 tokens.txt
 cache/
 plots/
+.ipynb_checkpoints/
+__pycache__/
