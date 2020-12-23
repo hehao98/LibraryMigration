@@ -3,7 +3,8 @@ import re
 import logging
 import pymongo
 import pandas as pd
-from typing import List, Tuple, Set
+from collections import Counter, defaultdict
+from typing import List, Tuple, Set, Iterable
 
 
 MONGO_URL = "mongodb://127.0.0.1:27017"
@@ -73,15 +74,26 @@ def select_projects_from_libraries_io() -> pd.DataFrame:
         "hostType": "GitHub",
         "fork": False,
         "language": "Java",
-        "starsCount": {"$gte": 10},
+        "starsCount": {"$gt": 10},
     })))
-    logging.debug(f"{len(projects)} non-fork GitHub Java projects with stars >= 10")
+    logging.debug(f"{len(projects)} non-fork GitHub Java projects with stars > 10")
 
-    good_names = set(seq["repoName"].replace("_", "/") for seq in db.wocDepSeq3.find() if len(seq["seq"]) >= 1)
-    projects = projects[projects["nameWithOwner"].isin(good_names)]
-    logging.debug(f"{len(projects)} non-fork GitHub Java projects with stars >= 10 and one pom.xml file")
+    name_to_pom_count = Counter()
+    name_to_pom_commits = defaultdict(set)
+    for seq in db.wocDepSeq3.find():
+        name = seq["repoName"].replace("_", "/")
+        if len(seq["seq"]) >= 1:
+            name_to_pom_count[name] += 1
+        for item in seq["seq"]:
+            name_to_pom_commits[name].add(item["commit"])
 
-    projects.to_csv("cache/projects.csv", index=False)
+    projects = projects[projects["nameWithOwner"].isin(name_to_pom_count.keys())]
+    projects["pomFilesCount"] = projects["nameWithOwner"].map(lambda n: name_to_pom_count[n])
+    projects["pomFileModifyingCommitsCount"] = projects["nameWithOwner"].map(lambda n: len(name_to_pom_commits[n]))
+    logging.debug(f"{len(projects)} non-fork GitHub Java projects with stars > 10 and one pom.xml file")
+
+    projects["commitsCount"] = projects["_id"].map(lambda i: len(db.wocRepository.find_one({"_id": i})["commits"]))
+    projects.to_csv("cache/projects.csv", index=False, encoding="utf-8")
     return projects
 
 
@@ -94,10 +106,10 @@ def select_libraries_from_libraries_io() -> pd.DataFrame:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     libraries = pd.DataFrame(list(db.lioProject.find({
         "platform": "Maven",
-        "dependentRepositoriesCount": {"$gte": 10}
+        "dependentRepositoriesCount": {"$gt": 10}
     })))
-    logging.debug(f"{len(libraries)} libraries with dependent repository count >= 10")
-    libraries.to_csv("cache/libraries.csv", index=False)
+    logging.debug(f"{len(libraries)} libraries with dependent repository count > 10")
+    libraries.to_csv("cache/libraries.csv", index=False, encoding="utf-8")
     return libraries
 
 
@@ -107,6 +119,16 @@ def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
 
 
 def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame:
+    cache_path = f"cache/{project_name.replace('/', '_')}.csv"
+    if os.path.exists(cache_path):
+        results = pd.read_csv(cache_path).fillna("")
+        if valid_libs is not None:
+            valid_libs.add("")
+            results = results[results["lib1"].isin(valid_libs) & results["lib2"].isin(valid_libs)]
+        return results
+    if not os.path.exists("cache"):
+        os.mkdir("cache")
+
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     results = []
     for dep_seq in db.wocDepSeq3.find({"repoName": project_name.replace("/", "_")}):
@@ -116,24 +138,33 @@ def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) ->
                     "project": project_name,
                     "commit": item["commit"],
                     "file": dep_seq["fileName"],
+                    "type": "",
                     "lib1": "",
                     "lib2": "",
                     "ver1": "",
                     "ver2": "",
                 }
                 if change.startswith("+"):
+                    row["type"] = "add"
                     row["lib2"], row["ver2"] = change[1:].split(" ")
                 elif change.startswith("-"):
+                    row["type"] = "rem"
                     row["lib1"], row["ver1"] = change[1:].split(" ")
                 elif change.startswith(" "):
+                    row["type"] = "verchg"
                     row["lib1"] = row["lib2"] = change[1:].split(" ")[0]
                     row["ver1"], row["ver2"] = change[1:].split(" ")[1].split("->")
                 results.append(row)
     results = pd.DataFrame(results).fillna("")
+    results.to_csv(cache_path, index=False)
     if valid_libs is not None:
         valid_libs.add("")
         results = results[results["lib1"].isin(valid_libs) & results["lib2"].isin(valid_libs)]
     return results
+
+
+def plot_distribution(data: Iterable[any], file: str) -> None:
+    pass
 
 
 if __name__ == "__main__":

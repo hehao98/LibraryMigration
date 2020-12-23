@@ -4,3 +4,5 @@ openpyxl
 pandas
 PyGithub
 pymongo
+seaborn
+jupyter
