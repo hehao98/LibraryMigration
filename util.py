@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import pymongo
+import multiprocessing
 import pandas as pd
 from collections import Counter, defaultdict
 from typing import List, Tuple, Set, Iterable
@@ -114,7 +115,7 @@ def select_libraries_from_libraries_io() -> pd.DataFrame:
 
 
 def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
-    rules = pd.read_excel("data/rules.xlsx")
+    rules = pd.read_excel("data/rules.xlsx", engine="openpyxl")
     return rules[rules["fromLib"].isin(valid_libs) & rules["toLib"].isin(valid_libs)]
 
 
@@ -171,10 +172,36 @@ def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) ->
     return results
 
 
+def select_dependency_changes_all() -> pd.DataFrame:
+    projects = select_projects_from_libraries_io()
+    libraries = select_libraries_from_libraries_io()
+    lib_names = set(libraries["name"])
+    with multiprocessing.Pool(32) as pool:
+        results = pool.starmap(
+            select_dependency_changes,
+            [(proj_name, lib_names) for proj_name in projects["nameWithOwner"]]
+        )
+    dep_changes = pd.concat(filter(lambda x: x is not None, results))
+    return dep_changes
+
+
 def select_commits_by_project(project_name: str) -> List[dict]:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     commit_shas = list(db.wocRepository.find_one({"name": project_name.replace("/", "_")})["commits"])
     return list(db.wocCommit.find({"_id": {"$in": commit_shas}}))
+
+
+def select_library_versions(lib_name: str) -> List[dict]:
+    db = pymongo.MongoClient(MONGO_URL).migration_helper
+    group_id, artifact_id = lib_name.split(":")
+    idx = db.libraryGroupArtifact.find_one({"groupId": group_id, "artifactId": artifact_id})["_id"]
+    return list(db.libraryVersion.find({"groupArtifactId": idx}))
+
+
+def select_migrations() -> pd.DataFrame:
+    migrations = pd.read_excel("data/migrations.xlsx", engine="openpyxl")
+    lib_names = set(select_libraries_from_libraries_io()["name"])
+    return migrations[migrations["fromLib"].isin(lib_names) & migrations["toLib"].isin(lib_names)].copy()
 
 
 if __name__ == "__main__":

@@ -6,8 +6,8 @@ All files should not have any names so that we can just remove version control i
 
 ## Development
 
-We use Anaconda and PyCharm Professional for development. 
-Please configure your PyCharm to use a new Conda environment with Python 3.7+ and [requirements](requirements.txt) satisfied.
+We use Anaconda for development. 
+Please configure to use a new Conda environment with Python 3.7+ and [requirements](requirements.txt) satisfied.
 
 ## Data Preparation
 
