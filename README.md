@@ -16,20 +16,17 @@ The more compact dataset of legal library migration rules is [here](data/rules.x
 We use [get_issues.py](get_prs_by_commits.py) Python script to get issues and PRs [here](data/prs.xlsx).
 We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx).
 
+The final coding is done entirely manually in [this file](data/coding.xlsx).
+
 ## Thematic Analysis
 
 [1] provides an in-depth introduction to thematic analysis.
 
-### Possible RQs
+### Research Questions
 
 Canonically, a round of thematic analysis should only deals with one RQ.
-However, since we do not know our RQ exactly now,
-we seek to answer these possible research questions through this thematic analysis.
-* What are the reasons for a library migration? 
-* How is a library migration decided? 
-* How is a migration target chosen? 
-* Who decides a library migration? 
-* Who cares about library migrations?
+We seek to answer these possible research questions through this thematic analysis:
+**What are the reasons for a library migration?**
 
 ### Important Concepts
 
@@ -52,6 +49,10 @@ We have three kind of text to analyze: commit messages, issues, and PRs.
 For issues and PRs, we analyze all text in the issue/PR page, including titles, descriptions, and comments.
 If some clearly relevant link is identified, we add the text in the links to our data as well. 
 Since most of the text may be irrelevant, two of the authors should independently collect and keep relevant raw text in two table sheets in Phase 1.
+
+## Predictive Modeling
+
+TODO.
 
 ## References
 
