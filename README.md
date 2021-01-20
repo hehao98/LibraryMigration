@@ -9,6 +9,12 @@ All files should not have any names so that we can just remove version control i
 We use Anaconda for development. 
 Please configure to use a new Conda environment with Python 3.7+ and [requirements](requirements.txt) satisfied.
 
+```shell script
+conda create -n LibraryMigration python=3.8
+conda activate LibraryMigration
+python -m pip install -r requirements.txt
+```
+
 ## Data Preparation
 
 A dataset of library migration is already available [here](data/migrations.xlsx).

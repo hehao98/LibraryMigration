@@ -5,7 +5,7 @@ import pymongo
 import multiprocessing
 import pandas as pd
 from collections import Counter, defaultdict
-from typing import List, Tuple, Set, Iterable
+from typing import List, Tuple, Set
 
 
 MONGO_URL = "mongodb://127.0.0.1:27017"
@@ -119,7 +119,7 @@ def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
     return rules[rules["fromLib"].isin(valid_libs) & rules["toLib"].isin(valid_libs)]
 
 
-def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame:
+def select_dependency_changes(project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame or None:
     cache_path = f"cache/{project_name.replace('/', '_')}.csv"
     if os.path.exists(cache_path):
         results = pd.read_csv(cache_path).fillna("")
