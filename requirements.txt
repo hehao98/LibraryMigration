@@ -6,3 +6,9 @@ PyGithub
 pymongo
 seaborn
 jupyter
+networkx
+python-louvain
+BeautifulSoup4
+requests
+fake_useragent
+aiohttp
