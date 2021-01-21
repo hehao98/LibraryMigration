@@ -5,7 +5,7 @@ import pandas as pd
 from collections import defaultdict
 from github import Github
 from github.GithubException import RateLimitExceededException, UnknownObjectException
-from util import get_tokens, get_issues_in_text
+from ghutil import get_tokens, get_issues_in_text
 
 
 async def get_issue(gh: Github, repo: str, number: int) -> dict or None:
@@ -71,10 +71,12 @@ async def get_coding_for_commits_and_prs():
     ghs = [Github(tokens[i]) for i in range(len(tokens))]
     tasks = []
     for idx, row in issues.iterrows():
-        tasks.append(get_issue(ghs[idx % len(ghs)], row["repoName"], row["number"]))
+        tasks.append(get_issue(ghs[idx % len(ghs)],
+                               row["repoName"], row["number"]))
     coding_data.extend(filter(lambda x: x is not None, await asyncio.gather(*tasks)))
 
-    pd.DataFrame(coding_data).to_excel("data/coding_commits_prs.xlsx", index=False)
+    pd.DataFrame(coding_data).to_excel(
+        "data/coding_commits_prs.xlsx", index=False)
     return coding_data
 
 
@@ -94,7 +96,9 @@ async def get_coding_for_linked_issues():
                 "sourceLink": row["link"],
                 "sourceRepoName": repo_name,
             })
-    logging.info("{} issues found in commit and PR coding text".format(len(issue_links)))
+    logging.info(
+        "{} issues found in commit and PR coding text".format(
+            len(issue_links)))
     pd.DataFrame(issues).to_excel("data/issues.xlsx", index=False)
 
     tokens = get_tokens("tokens.txt")
@@ -109,8 +113,10 @@ async def get_coding_for_linked_issues():
 
 
 def add_possible_migrations():
-    data1 = pd.read_excel("data/coding_issues.xlsx").drop_duplicates(["type", "link"]).fillna("")
-    data2 = pd.read_excel("data/coding_commits_prs.xlsx").drop_duplicates(["type", "link"]).fillna("")
+    data1 = pd.read_excel(
+        "data/coding_issues.xlsx").drop_duplicates(["type", "link"]).fillna("")
+    data2 = pd.read_excel(
+        "data/coding_commits_prs.xlsx").drop_duplicates(["type", "link"]).fillna("")
     data = pd.concat([data1, data2])
     migrations = pd.read_excel("data/migrations.xlsx")
     issues = pd.read_excel("data/issues.xlsx")
@@ -118,19 +124,25 @@ def add_possible_migrations():
 
     link_to_migrations = defaultdict(set)
     for idx, row in migrations.iterrows():
-        link_to_migrations[row["startCommit"]].add((row["fromLib"], row["toLib"]))
-        link_to_migrations[row["endCommit"]].add((row["fromLib"], row["toLib"]))
+        link_to_migrations[row["startCommit"]].add(
+            (row["fromLib"], row["toLib"]))
+        link_to_migrations[row["endCommit"]].add(
+            (row["fromLib"], row["toLib"]))
 
     for idx, row in prs.iterrows():
-        link_to_migrations[(row["repoName"], row["number"])] = set(link_to_migrations[row["relatedCommit"]])
+        link_to_migrations[(row["repoName"], row["number"])] = set(
+            link_to_migrations[row["relatedCommit"]])
 
     for idx, row in issues.iterrows():
-        repo_name = row["sourceLink"].split("/")[3] + "/" + row["sourceLink"].split("/")[4]
+        repo_name = row["sourceLink"].split(
+            "/")[3] + "/" + row["sourceLink"].split("/")[4]
         number = row["sourceLink"].split("/")[6]
         if "commit" in row["sourceLink"]:
-            link_to_migrations[(row["repoName"], row["number"])] = set(link_to_migrations[number])
+            link_to_migrations[(row["repoName"], row["number"])] = set(
+                link_to_migrations[number])
         else:
-            link_to_migrations[(row["repoName"], row["number"])] = set(link_to_migrations[(repo_name, int(number))])
+            link_to_migrations[(row["repoName"], row["number"])] = set(
+                link_to_migrations[(repo_name, int(number))])
 
     for idx, row in data.iterrows():
         repo_name = row["link"].split("/")[3] + "/" + row["link"].split("/")[4]
