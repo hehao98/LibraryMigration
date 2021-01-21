@@ -18,7 +18,7 @@ Read through them if you haven't done so.
 ### Research Questions
 
 Canonically, a round of thematic analysis should only deals with one RQ.
-We seek to answer these possible research questions through this thematic analysis:
+We seek to answer this possible research question throughout this thematic analysis:
 **What are the reasons for a library migration?**
 
 ### Important Concepts
