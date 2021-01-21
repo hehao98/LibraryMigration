@@ -68,10 +68,10 @@ The main difference between **Consistency** and **Compatibility** is that, the f
 1. **Compatibility - License**. The text discusses license issues of the source library. However, license only becomes a problem when a project meets some of the license restrictions, so we put it into *Project Context* Category.
 2. **Compatibility - Other Library**. The text states that developers conduct the migration because the target library is better integrated with another library the project is using.
 3. **Compatibility - Environment**. The text states that developers conduct the migration because the target library is better integrated with project development or runtime environment (OS, JRE, CI, etc).
-4. **Consistency - Align with Upstream**. The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
-5. **Consistency - Request from Downstream**.
-6. **Consistency - Unify within Project**.
-7. **Organiztional Influence**. The organization enforces a rule, or recommend to not use a library or use a library.
+4. **Consistency - with Upstream**. The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
+5. **Consistency - with Downstream**. The text indicates a request from downstream users to migrate to a library because they are already using it.
+6. **Consistency - within Project**. The text states that the migration is done to achieve consistency of practices within a project. The most common cases are using one library for one functionality instead of using different libraries in different modules to do the same thing. In other cases, migration is done for consistency in code or configuration.
+7. **Organiztional Influence**. The organization enforces a rule, or recommend to not use the source library or to use the target library.
 8. **Other**. Reduce JAR size, reduce number of dependencies.
 
 ## References
