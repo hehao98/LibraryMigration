@@ -45,7 +45,37 @@ Since most of the text may be irrelevant, two of the authors should independentl
 
 ## Generated Codes
 
-TODO.
+```
+Source Library:
+  * Deprecation
+    - No Longer Maintained
+    - Outdated
+  * Issue
+    - Bug
+    - Vulnerability
+    - Performance
+    - Miscellaneous
+  * Bad Reputation
+Target Library:
+  * Feature
+  * Ease of Use
+  * Performance
+  * Flexibility
+  * Good Reputation
+Project Context:
+  * Compatibility
+    - License
+    - Other Library
+    - Environment (Java Version)
+  * Consistency
+    - Align with Upstream
+    - Request from Downstream
+    - Unify within Project
+  * Other
+    - Reduce JAR Size
+    - Reduce Number of Dependencies
+    - Avoid Dependency Conflict
+```
 
 ## References
 
