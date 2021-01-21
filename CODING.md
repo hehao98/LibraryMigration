@@ -47,32 +47,30 @@ Since most of the text may be irrelevant, two of the authors should independentl
 
 ### Source Library
 
-1. **No Longer Maintained**. The text mentions that the source library is no longer maintained, deprecated, end-of-life, etc. Since the source library will have no further fixes and security patches, it makes sense to move away from this library.
-2. **Outdated**. The text states that the source library is old, outdated, obsolete. The source library may still have some maintenance but the project abandon it because there are more "modern" choices, which may fit better with recently emerged requirements.
-3. **Vulnerability**. The text states that the source library has security vulnerability (CVE). We distinguish this from other issues because it is more common and probably more important than other issues when maintaining dependencies.
-4. **Issue**. The text states that the developers encountered a bug, warning, error or other issues with the source library. The issue is mainly from the library itself and not the result of interaction with other project contextual factors.
-5. **Bad Reputation**.
+1. **No Longer Maintained**. (`source:no-longer-maintained`) The text mentions that the source library is no longer maintained, deprecated, end-of-life, etc. Since the source library will have no further fixes and security patches, it makes sense to move away from this library.
+2. **Outdated**. (`source:outdated`) The text states that the source library is old, outdated, obsolete. The source library may still have some maintenance but the project abandon it because there are more "modern" choices, which may fit better with recently emerged requirements.
+3. **Vulnerability**. (`source:vulnerability`) The text states that the source library has security vulnerability (CVE). We distinguish this from other issues because it is more common and probably more important than other issues when maintaining dependencies.
+4. **Issue**. (`source:issue`) The text states that the developers encountered a bug, warning, error or other issues with the source library. The issue is mainly from the library itself and not the result of interaction with other project contextual factors.
 
 ### Target Library
 
-1. **Feature**. The text states that the target library has some desirable feature for the project.
-2. **Ease of Use**. The text conveys that the target library is more convinient to use, results in cleaner code, easy to configure, etc.
-3. **Performance**. The text states that the target library runs faster, is memory efficient, has smaller size, or is lightweight.
-4. **Flexibility**. The text states that the target library is more flexible, allow user to choose inner implementation, etc.
-5. **Good Reputation**. No specific reason is included in the text, but only a positive attitude towards the target library.
+1. **Feature**. (`target:feature`) The text states that the target library has some desirable feature for the project.
+2. **Ease of Use**. (`target:ease-of-use`) The text conveys that the target library is more convinient to use, results in cleaner code, easy to configure, etc.
+3. **Performance**. (`target:performance`) The text states that the target library runs faster, is memory efficient, has smaller size, or is lightweight.
+4. **Flexibility**. (`target:flexibility`) The text states that the target library is more flexible, allow user to choose inner implementation, etc.
 
 ### Project Context
 
 The main difference between **Consistency** and **Compatibility** is that, the former is to adopt a consistent practice for reducing further maintanance effort, while the latter is to take immediate action to solve a specific problem.
 
-1. **Compatibility - License**. The text discusses license issues of the source library. However, license only becomes a problem when a project meets some of the license restrictions, so we put it into *Project Context* Category.
-2. **Compatibility - Other Library**. The text states that developers conduct the migration because the target library is better integrated with another library the project is using.
-3. **Compatibility - Environment**. The text states that developers conduct the migration because the target library is better integrated with project development or runtime environment (OS, JRE, CI, etc).
-4. **Consistency - with Upstream**. The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
-5. **Consistency - with Downstream**. The text indicates a request from downstream users to migrate to a library because they are already using it.
-6. **Consistency - within Project**. The text states that the migration is done to achieve consistency of practices within a project. The most common cases are using one library for one functionality instead of using different libraries in different modules to do the same thing. In other cases, migration is done for consistency in code or configuration.
-7. **Organiztional Influence**. The organization enforces a rule, or recommend to not use the source library or to use the target library.
-8. **Other**. Reduce JAR size, reduce number of dependencies.
+1. **Compatibility - License**. (`project:compatibility:license`) The text discusses license issues of the source library. However, license only becomes a problem when a project meets some of the license restrictions, so we put it into *Project Context* Category.
+2. **Compatibility - Other Library**. (`project:compatibility:other-library`)  The text states that developers conduct the migration because the target library is better integrated with another library the project is using.
+3. **Compatibility - Environment**. (`project:compatibility:environment`) The text states that developers conduct the migration because the target library is better integrated with project development or runtime environment (OS, JRE, CI, etc).
+4. **Consistency - with Upstream**. (`project:consistency:upstream`) The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
+5. **Consistency - with Downstream**. (`project:consistency:downstream`) The text indicates a request from downstream users to migrate to a library because they are already using it.
+6. **Consistency - within Project**. (`project:consistency:within-project`) The text states that the migration is done to achieve consistency of practices within a project. The most common cases are using one library for one functionality instead of using different libraries in different modules to do the same thing. In other cases, migration is done for consistency in code or configuration.
+7. **Organiztional Influence**. (`project:organizational`) The organization enforces a rule, or recommend to not use the source library or to use the target library.
+8. **Other**. (`project:other`) Reduce JAR size, reduce number of dependencies.
 
 ## References
 
