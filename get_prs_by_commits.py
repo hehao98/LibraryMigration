@@ -2,7 +2,7 @@ import time
 import logging
 import pandas as pd
 from github import Github, Issue
-from util import get_tokens
+from ghutil import get_tokens
 
 
 def issue_to_excel_row(issue: Issue, commit_sha: str) -> dict:
@@ -24,19 +24,11 @@ def run():
     gh = Github(tokens[0])
     migrations = pd.read_excel("data/migrations.xlsx")
     commits = set(migrations["startCommit"]) | set(migrations["endCommit"])
-    repo_names = set(map(lambda x: x.replace("_", "/"),  migrations["repoName"]))
-    logging.info("{} repositories, {} commits".format(len(repo_names), len(commits)))
-
-    """
-    repos = dict()
-    for repo_name in repo_names:
-        repos[repo_name] = {
-            "connection":  gh.get_repo(repo_name),
-            "commits": set()
-        }
-    for repo_name, commit1, commit2 in zip(migrations["repoName"], migrations["startCommit"], migrations["endCommit"]):
-        repos[repo_name]["commit"].update((commit1, commit2))
-    """
+    repo_names = set(map(lambda x: x.replace("_", "/"), migrations["repoName"]))
+    logging.info(
+        "{} repositories, {} commits".format(
+            len(repo_names),
+            len(commits)))
 
     # Although it looks like we are retrieving issues, actually all we get are PRs!
     issue_list = []
