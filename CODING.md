@@ -59,7 +59,7 @@ Since most of the text may be irrelevant, two of the authors should independentl
 3. **Performance**. (`target:performance`) The text states that the target library runs faster, is memory efficient, has smaller size, or is lightweight.
 4. **Flexibility**. (`target:flexibility`) The text states that the target library is more flexible, allow user to choose inner implementation, etc.
 
-### Project Context
+### Project Specfic
 
 The main difference between **Consistency** and **Compatibility** is that, the former is to adopt a consistent practice for reducing further maintanance effort, while the latter is to take immediate action to solve a specific problem.
 
@@ -70,7 +70,19 @@ The main difference between **Consistency** and **Compatibility** is that, the f
 5. **Consistency - with Downstream**. (`project:consistency:downstream`) The text indicates a request from downstream users to migrate to a library because they are already using it.
 6. **Consistency - within Project**. (`project:consistency:within-project`) The text states that the migration is done to achieve consistency of practices within a project. The most common cases are using one library for one functionality instead of using different libraries in different modules to do the same thing. In other cases, migration is done for consistency in code or configuration.
 7. **Organiztional Influence**. (`project:organizational`) The organization enforces a rule, or recommend to not use the source library or to use the target library.
-8. **Other**. (`project:other`) Reduce JAR size, reduce number of dependencies.
+8. **Other**. (`project:other`) Other project specifc reasons which cannot be put in any of the above taxonomies, e.g. reduce JAR size, reduce number of dependencies.
+
+### Library Specfic - Another Alternative
+
+The following categories are adopted from [3] but does not seem to fit well because some reasons are rather common in the context of library migration.
+
+1. **Feature**.
+2. **Usability**.
+3. **Performance**.
+4. **Security**.
+5. **Activity**.
+6. **Size/Complexity**.
+7. **Stability/Maturity**.
 
 ## References
 
@@ -78,3 +90,4 @@ The main difference between **Consistency** and **Compatibility** is that, the f
    [Download](https://www.researchgate.net/profile/David_Morgan19/post/how_to_do_qualitative_analysis_of_25_one_to_one_interviews/attachment/5b045e3f4cde260d15e0492e/AS%3A629151971151872%401527012927043/download/Braun+12+Psych+Handbook.pdf)
 2. Cruzes, Daniela S., and Tore Dyba. "Recommended steps for thematic synthesis in software engineering." 
    2011 international symposium on empirical software engineering and measurement. IEEE, 2011.
+3. Larios-Vargas, Enrique, et al. "Selecting third-party libraries: The practitioners' perspective." arXiv preprint arXiv:2005.12574 (2020).
