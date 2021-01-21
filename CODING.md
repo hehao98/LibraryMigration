@@ -59,7 +59,7 @@ Since most of the text may be irrelevant, two of the authors should independentl
 3. **Performance**. (`target:performance`) The text states that the target library runs faster, is memory efficient, has smaller size, or is lightweight.
 4. **Flexibility**. (`target:flexibility`) The text states that the target library is more flexible, allow user to choose inner implementation, etc.
 
-### Project Specfic
+### Project Specific
 
 The main difference between **Consistency** and **Compatibility** is that, the former is to adopt a consistent practice for reducing further maintanance effort, while the latter is to take immediate action to solve a specific problem.
 
@@ -69,7 +69,7 @@ The main difference between **Consistency** and **Compatibility** is that, the f
 4. **Consistency - with Upstream**. (`project:consistency:upstream`) The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
 5. **Consistency - with Downstream**. (`project:consistency:downstream`) The text indicates a request from downstream users to migrate to a library because they are already using it.
 6. **Consistency - within Project**. (`project:consistency:within-project`) The text states that the migration is done to achieve consistency of practices within a project. The most common cases are using one library for one functionality instead of using different libraries in different modules to do the same thing. In other cases, migration is done for consistency in code or configuration.
-7. **Organiztional Influence**. (`project:organizational`) The organization enforces a rule, or recommend to not use the source library or to use the target library.
+7. **Organizational Influence**. (`project:organizational`) The organization enforces a rule, or recommend to not use the source library or to use the target library.
 8. **Other**. (`project:other`) Other project specifc reasons which cannot be put in any of the above taxonomies, e.g. reduce JAR size, reduce number of dependencies.
 
 ### Library Specfic - Another Alternative
