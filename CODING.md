@@ -55,13 +55,11 @@ Source Library:
     - Vulnerability
     - Performance
     - Miscellaneous
-  * Bad Reputation
 Target Library:
   * Feature
   * Ease of Use
-  * Performance
   * Flexibility
-  * Good Reputation
+  * Performance
 Project Context:
   * Compatibility
     - License
@@ -75,6 +73,8 @@ Project Context:
     - Reduce JAR Size
     - Reduce Number of Dependencies
     - Avoid Dependency Conflict
+Organizational Influence
+Reputational Influence
 ```
 
 ## References
