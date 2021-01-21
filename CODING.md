@@ -45,37 +45,34 @@ Since most of the text may be irrelevant, two of the authors should independentl
 
 ## Generated Codes
 
-```
-Source Library:
-  * Deprecation
-    - No Longer Maintained
-    - Outdated
-  * Issue
-    - Bug
-    - Vulnerability
-    - Performance
-    - Miscellaneous
-Target Library:
-  * Feature
-  * Ease of Use
-  * Flexibility
-  * Performance
-Project Context:
-  * Compatibility
-    - License
-    - Other Library
-    - Environment (Java Version)
-  * Consistency
-    - Align with Upstream
-    - Request from Downstream
-    - Unify within Project
-  * Other
-    - Reduce JAR Size
-    - Reduce Number of Dependencies
-    - Avoid Dependency Conflict
-Organizational Influence
-Reputational Influence
-```
+### Source Library
+
+1. **No Longer Maintained**. The text mentions that the source library is no longer maintained, deprecated, end-of-life, etc. Since the source library will have no further fixes and security patches, it makes sense to move away from this library.
+2. **Outdated**. The text states that the source library is old, outdated, obsolete. The source library may still have some maintenance but the project abandon it because there are more "modern" choices, which may fit better with recently emerged requirements.
+3. **Vulnerability**. The text states that the source library has security vulnerability (CVE). We distinguish this from other issues because it is more common and probably more important than other issues when maintaining dependencies.
+4. **Issue**. The text states that the developers encountered a bug, warning, error or other issues with the source library. The issue is mainly from the library itself and not the result of interaction with other project contextual factors.
+5. **Bad Reputation**.
+
+### Target Library
+
+1. **Feature**. The text states that the target library has some desirable feature for the project.
+2. **Ease of Use**. The text conveys that the target library is more convinient to use, results in cleaner code, easy to configure, etc.
+3. **Performance**. The text states that the target library runs faster, is memory efficient, has smaller size, or is lightweight.
+4. **Flexibility**. The text states that the target library is more flexible, allow user to choose inner implementation, etc.
+5. **Good Reputation**. No specific reason is included in the text, but only a positive attitude towards the target library.
+
+### Project Context
+
+The main difference between **Consistency** and **Compatibility** is that, the former is to adopt a consistent practice for reducing further maintanance effort, while the latter is to take immediate action to solve a specific problem.
+
+1. **Compatibility - License**. The text discusses license issues of the source library. However, license only becomes a problem when a project meets some of the license restrictions, so we put it into *Project Context* Category.
+2. **Compatibility - Other Library**. The text states that developers conduct the migration because the target library is better integrated with another library the project is using.
+3. **Compatibility - Environment**. The text states that developers conduct the migration because the target library is better integrated with project development or runtime environment (OS, JRE, CI, etc).
+4. **Consistency - Align with Upstream**. The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
+5. **Consistency - Request from Downstream**.
+6. **Consistency - Unify within Project**.
+7. **Organiztional Influence**. The organization enforces a rule, or recommend to not use a library or use a library.
+8. **Other**. Reduce JAR size, reduce number of dependencies.
 
 ## References
 
