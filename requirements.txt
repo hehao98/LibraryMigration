@@ -6,3 +6,5 @@ PyGithub
 pymongo
 seaborn
 jupyter
+jupyterlab
+autopep8

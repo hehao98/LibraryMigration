@@ -1,6 +1,7 @@
 .idea/
 *.log
 tokens.txt
+.vscode/
 cache/
 plots/
 .ipynb_checkpoints/

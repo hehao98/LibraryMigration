@@ -7,12 +7,18 @@ All files should not have any names so that we can just remove version control i
 ## Development
 
 We use Anaconda for development. 
-Please configure to use a new Conda environment with Python 3.7+ and [requirements](requirements.txt) satisfied.
+Please configure to use a new Conda environment with Python 3.8 and [requirements](requirements.txt) satisfied.
 
 ```shell script
 conda create -n LibraryMigration python=3.8
 conda activate LibraryMigration
 python -m pip install -r requirements.txt
+```
+
+Format all Python file like this
+
+```shell script
+autopep8 --in-place *.py
 ```
 
 ## Data Preparation
