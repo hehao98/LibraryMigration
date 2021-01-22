@@ -78,7 +78,7 @@ The main difference between **Consistency** and **Compatibility** is that, the f
 7. **Organizational Influence**. (`project:organizational`) The organization enforces a rule, or recommend to not use the source library or to use the target library.
 8. **Other**. (`project:other`) Other project specifc reasons which cannot be put in any of the above taxonomies.
 
-I'm considering merging **Compatibility - Other Library**, **Compatibility - Environment** and **Consistency - Upstream** into one **Integration** category and dropping **Consistency - with Downstream**, but it can be done in the final themes, not in the code here, and it should only be done when the Cohen's kappa is low in these codes but high when they are merged.
+I'm considering merging **Compatibility - Other Library**, **Compatibility - Environment** and **Consistency - Upstream** into one **Integration** category and dropping **Consistency - with Downstream**, but it can be done in the final themes, not in the code here, and it should only be done when the Cohen's kappa is low in these codes but high when they are merged. I'm also considering merging the three **Other** code into one theme because it is sometimes hard to distinguish between them.
 
 ## Final Themes
 
