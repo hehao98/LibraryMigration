@@ -163,6 +163,16 @@ def select_library_versions(lib_name: str) -> List[dict]:
     return list(db.libraryVersion.find({"groupArtifactId": idx}))
 
 
+def select_library_dependencies(lib_name: str) -> List[dict]:
+    db = pymongo.MongoClient(MONGO_URL).migration_helper
+    return list(db.lioProjectDependency.find({ "projectName": lib_name }))
+
+
+def select_library_dependecies_transitive(lib_name: str) -> List[dict]:
+    logging.error("Not implemented yet")
+    return []
+
+
 def select_migrations() -> pd.DataFrame:
     migrations = pd.read_excel("data/migrations.xlsx", engine="openpyxl")
     lib_names = set(select_libraries_from_libraries_io()["name"])

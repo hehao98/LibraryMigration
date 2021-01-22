@@ -8,3 +8,4 @@ seaborn
 jupyter
 jupyterlab
 autopep8
+semver=2.13.0
