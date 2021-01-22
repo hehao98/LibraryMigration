@@ -9,3 +9,9 @@ jupyter
 jupyterlab
 autopep8
 semver=2.13.0
+networkx
+python-louvain
+BeautifulSoup4
+requests
+fake_useragent
+aiohttp

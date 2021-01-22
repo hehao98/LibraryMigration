@@ -6,3 +6,4 @@ cache/
 plots/
 .ipynb_checkpoints/
 __pycache__/
+.DS_Store
