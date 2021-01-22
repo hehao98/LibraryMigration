@@ -51,38 +51,38 @@ Since most of the text may be irrelevant, two of the authors should independentl
 2. **Outdated**. (`source:outdated`) The text states that the source library is old, outdated, obsolete. The source library may still have some maintenance but the project abandon it because there are more "modern" choices, which may fit better with recently emerged requirements.
 3. **Vulnerability**. (`source:vulnerability`) The text states that the source library has security vulnerability (CVE). We distinguish this from other issues because it is more common and probably more important than other issues when maintaining dependencies.
 4. **Issue**. (`source:issue`) The text states that the developers encountered a bug, warning, error or other issues with the source library. The issue is mainly from the library itself and not the result of interaction with other project contextual factors.
+5. **Other**. (`source:other`) The text states other reasons related to source library which cannot be assigned any code.
 
-### Target Library
+### Target Library (Partially adopted from [3])
 
 1. **Feature**. (`target:feature`) The text states that the target library has some desirable feature for the project.
-2. **Ease of Use**. (`target:ease-of-use`) The text conveys that the target library is more convinient to use, results in cleaner code, easy to configure, etc.
-3. **Performance**. (`target:performance`) The text states that the target library runs faster, is memory efficient, has smaller size, or is lightweight.
+2. **Ease of Use**. (`target:ease-of-use`) The text conveys that the target library is more convinient to use, results in cleaner code, easy to configure, has better documentation, etc.
+3. **Performance**. (`target:performance`) The text states that the target library runs faster, is memory efficient
 4. **Flexibility**. (`target:flexibility`) The text states that the target library is more flexible, allow user to choose inner implementation, etc.
+5. **Activity**. (`target:activity`) The text states that the target library is better maintained, community is more active and inclusive, etc.
+6. **Size/Complexity**. (`target:size`) The text states that the target library has smaller size, is lightweight, less complex, can reduce JAR size, etc.
+7. **Stability/Maturity**. (`target:stability`) The text states that the target library is more stable, more robust, more mature, etc.
+8. **Popularity**. (`target:popularity`) The text states that the target library has wide adoption, increasing popularity, is used by many projects/by famous project, seems to be a better choice, etc.
+9. **Other**. (`target:other`) The text states other reasons related to target library which cannot be assigned any code.
 
 ### Project Specific
 
 The main difference between **Consistency** and **Compatibility** is that, the former is to adopt a consistent practice for reducing further maintanance effort, while the latter is to take immediate action to solve a specific problem.
 
 1. **Compatibility - License**. (`project:compatibility:license`) The text discusses license issues of the source library. However, license only becomes a problem when a project meets some of the license restrictions, so we put it into *Project Context* Category.
-2. **Compatibility - Other Library**. (`project:compatibility:other-library`)  The text states that developers conduct the migration because the target library is better integrated with another library the project is using.
+2. **Compatibility - Other Library**. (`project:compatibility:other-library`)  The text states that developers conduct the migration because the target library is better integrated with another library the project is using. Here the term library includes another dependency, including frameworks like OSGi and Spring.
 3. **Compatibility - Environment**. (`project:compatibility:environment`) The text states that developers conduct the migration because the target library is better integrated with project development or runtime environment (OS, JRE, CI, etc).
 4. **Consistency - with Upstream**. (`project:consistency:upstream`) The text states that the project align library choices with other libraries or frameworks the project is already using and likely deeply integrated. For example, a project may choose to use `jackson` because Spring is already using it and the project is deeply integrated with Spring.
 5. **Consistency - with Downstream**. (`project:consistency:downstream`) The text indicates a request from downstream users to migrate to a library because they are already using it.
 6. **Consistency - within Project**. (`project:consistency:within-project`) The text states that the migration is done to achieve consistency of practices within a project. The most common cases are using one library for one functionality instead of using different libraries in different modules to do the same thing. In other cases, migration is done for consistency in code or configuration.
 7. **Organizational Influence**. (`project:organizational`) The organization enforces a rule, or recommend to not use the source library or to use the target library.
-8. **Other**. (`project:other`) Other project specifc reasons which cannot be put in any of the above taxonomies, e.g. reduce JAR size, reduce number of dependencies.
+8. **Other**. (`project:other`) Other project specifc reasons which cannot be put in any of the above taxonomies.
 
-### Library Specfic - Another Alternative
+I'm considering merging **Compatibility - Other Library**, **Compatibility - Environment** and **Consistency - Upstream** into one **Integration** category and dropping **Consistency - with Downstream**, but it can be done in the final themes, not in the code here, and it should only be done when the Cohen's kappa is low in these codes but high when they are merged.
 
-The following categories are adopted from [3] but does not seem to fit well because some reasons are rather common in the context of library migration.
+## Final Themes
 
-1. **Feature**.
-2. **Usability**.
-3. **Performance**.
-4. **Security**.
-5. **Activity**.
-6. **Size/Complexity**.
-7. **Stability/Maturity**.
+TODO
 
 ## References
 
