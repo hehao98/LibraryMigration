@@ -18,7 +18,7 @@ python -m pip install -r requirements.txt
 Format all Python file like this
 
 ```shell script
-autopep8 --in-place *.py
+autopep8 --in-place --aggressive --max-line-length 119 *.py 
 ```
 
 ## Data Preparation

@@ -30,7 +30,8 @@ def run():
             len(repo_names),
             len(commits)))
 
-    # Although it looks like we are retrieving issues, actually all we get are PRs!
+    # Although it looks like we are retrieving issues, actually all we get are
+    # PRs!
     issue_list = []
     for idx, commit in enumerate(commits):
         logging.info("Commit {}/{}: {}".format(idx + 1, len(commits), commit))
