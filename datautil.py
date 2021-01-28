@@ -3,21 +3,17 @@ import logging
 import pymongo
 import multiprocessing
 import pandas as pd
+from pprint import pprint
 from collections import Counter, defaultdict
+from queue import Queue
 from typing import List, Set
 
 
 MONGO_URL = "mongodb://127.0.0.1:27017"
-CACHE_DIR = "../cache/"
-if not os.path.exists(CACHE_DIR):
-    os.mkdir(CACHE_DIR)
 
 
 def select_projects_from_libraries_io() -> pd.DataFrame:
-    project_csv_path = os.path.join(CACHE_DIR, "projects.csv")
-    if os.path.exists(project_csv_path):
-        return pd.read_csv(project_csv_path)
-
+    """Select a project dataframe as our research subject"""
     db = pymongo.MongoClient(MONGO_URL).migration_helper
 
     projects = pd.DataFrame(list(db.lioRepository.find({
@@ -49,15 +45,11 @@ def select_projects_from_libraries_io() -> pd.DataFrame:
 
     projects["commitsCount"] = projects["_id"].map(
         lambda i: len(db.wocRepository.find_one({"_id": i})["commits"]))
-    projects.to_csv(project_csv_path, index=False, encoding="utf-8")
     return projects
 
 
 def select_libraries_from_libraries_io() -> pd.DataFrame:
-    library_csv_path = os.path.join(CACHE_DIR, "libraries.csv")
-    if os.path.exists(library_csv_path):
-        return pd.read_csv(library_csv_path)
-
+    """Select a library dataframe as our research subject"""
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     libraries = pd.DataFrame(list(db.lioProject.find({
         "platform": "Maven",
@@ -65,11 +57,11 @@ def select_libraries_from_libraries_io() -> pd.DataFrame:
     })))
     logging.debug(
         f"{len(libraries)} libraries with dependent repository count > 10")
-    libraries.to_csv(library_csv_path, index=False, encoding="utf-8")
     return libraries
 
 
 def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
+    """Select a migration rule dataframe as our research subject"""
     rules = pd.read_excel("data/rules.xlsx", engine="openpyxl")
     return rules[rules["fromLib"].isin(
         valid_libs) & rules["toLib"].isin(valid_libs)]
@@ -77,21 +69,9 @@ def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
 
 def select_dependency_changes(
         project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame or None:
-    cache_path = os.path.join(
-        CACHE_DIR, project_name.replace(
-            '/', '_') + ".csv")
-    if os.path.exists(cache_path):
-        results = pd.read_csv(cache_path).fillna("")
-        if valid_libs is not None:
-            valid_libs.add("")
-            results = results[results["lib1"].isin(
-                valid_libs) & results["lib2"].isin(valid_libs)]
-        return results
-
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     commits_non_merge = set(
-        c["_id"] for c in select_commits_by_project(project_name) if len(
-            c["parents"]) < 2)
+        c["_id"] for c in select_commits_by_project(project_name) if len(c["parents"]) < 2)
     results = []
     for dep_seq in db.wocDepSeq3.find(
             {"repoName": project_name.replace("/", "_")}):
@@ -127,7 +107,6 @@ def select_dependency_changes(
     if len(results) == 0:
         return None
     results = pd.DataFrame(results).fillna("")
-    results.to_csv(cache_path, index=False)
     if valid_libs is not None:
         valid_libs.add("")
         results = results[results["lib1"].isin(
@@ -142,7 +121,8 @@ def select_dependency_changes_all() -> pd.DataFrame:
     with multiprocessing.Pool(32) as pool:
         results = pool.starmap(
             select_dependency_changes,
-            [(proj_name, lib_names) for proj_name in projects["nameWithOwner"]]
+            [(proj_name, lib_names)
+             for proj_name in projects["nameWithOwner"]]
         )
     dep_changes = pd.concat(filter(lambda x: x is not None, results))
     return dep_changes
@@ -165,7 +145,7 @@ def select_library_versions(lib_name: str) -> List[dict]:
 
 def select_library_dependencies(lib_name: str) -> List[dict]:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
-    return list(db.lioProjectDependency.find({ "projectName": lib_name }))
+    return list(db.lioProjectDependency.find({"projectName": lib_name}))
 
 
 def select_library_dependecies_transitive(lib_name: str) -> List[dict]:
@@ -181,9 +161,14 @@ def select_migrations() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
     print(select_libraries_from_libraries_io())
     print(select_projects_from_libraries_io())
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
+
+    select_commits_by_project("square/okhttp")
+
     print(select_dependency_changes("square/okhttp"))
     print(select_dependency_changes("square/okhttp",
                                     set(select_libraries_from_libraries_io()["name"])))

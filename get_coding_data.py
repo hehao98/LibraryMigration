@@ -18,7 +18,8 @@ async def get_issue(gh: Github, repo: str, number: int) -> dict or None:
             link = "https://github.com/{}/issues/{}".format(repo, issue.number)
             if issue.pull_request is not None:
                 data_type = "pull request"
-                link = "https://github.com/{}/pull/{}".format(repo, issue.number)
+                link = "https://github.com/{}/pull/{}".format(
+                    repo, issue.number)
             text = "{} - {} ({}) at {}\n\n{}\n\n".format(
                 issue.title, issue.user.name, issue.user.email, issue.created_at, issue.body)
             for comment in issue.get_comments():
