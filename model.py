@@ -1,88 +1,182 @@
+from datetime import datetime
 import pymongo
+import pytz
+import pandas as pd
 from dateutil.parser import parse as dateParser
-from dateutil import rrule
+import datautil
+import re
+from typing import List, Set
 MONGO_URL = "mongodb://127.0.0.1:27017"
 db = pymongo.MongoClient(MONGO_URL).migration_helper
+raw_db = pymongo.MongoClient(MONGO_URL).libraries
 
 
-def getProjectUsing(lib: str):
-    proD = db['lioProjectDependency']
-    myquery = {"dependencyName": {'$regex': 'org.json:json'}}
-    mydoc = proD.find(myquery)
-    projectsUsing = []
-    for i in mydoc:
-        id = i['projectId']
-        if id not in projectsUsing:
-            projectsUsing.append(id)
-    return projectsUsing
+def get_migration_to_library(lib: str, datetime: datetime) -> pd.DataFrame:
+    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    lib_required = migration_commits['lib2'].map(lambda x: x == lib)
+    date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
+    migration_to_commits = migration_commits[lib_required & date_required]
+    return migration_to_commits
 
 
-def getMigrationAwayCommits(from_lib: str):
-    commits = []
-    results = db.wocConfirmedMigration.find(
-        {"fromLib": from_lib})
-    for result in results:
-        commit = result['startCommit']
-        if not commits or commits[-1] != commit:
-            commits.append(commit)
-    return commits
+def get_migration_from_library(lib: str, datetime: datetime) -> pd.DataFrame:
+    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    lib_required = migration_commits['lib1'].map(lambda x: x == lib)
+    date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
+    migration_from_commits = migration_commits[lib_required & date_required]
+    return migration_from_commits
 
 
-def getMigrationToCommits(to_lib: str):
-    commits = []
-    results = db.wocConfirmedMigration.find(
-        {"toLib": to_lib})
-    for result in results:
-        commit = result['startCommit']
-        if not commits or commits[-1] != commit:
-            commits.append(commit)
-    return commits
+def get_commit_time(commit: str) -> datetime:
+    c = db.wocCommit.find_one({"_id": commit})
+    if c is not None:
+        return c['timestamp'].replace(tzinfo=pytz.timezone('UTC'))
+
+    else:
+        return None
 
 
-def getMigrationTime(commit: str):
-    return db.wocConfirmedMigration.find_one({"startCommit": commit})['startCommitTime']
+def get_library_nearest_published_time(lib: str, commit: str) -> datetime:
+    commit_time = get_commit_time(commit)
+    library_versions = raw_db.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
+                                            ("Published Timestamp", pymongo.DESCENDING)])
+    for library_version in library_versions:
+        published_time = dateParser(library_version['Published Timestamp'])
+        if published_time < commit_time:
+            return published_time
 
 
-def getLibraryPublishTime(lib: str):
-    repositoryId = db.lioProject.find_one({"name": lib})['repositoryId']
-    return dateParser(db.lioRepository.find_one({"_id": repositoryId})['createdTimestamp'])
+def get_library_first_published_time(lib: str) -> datetime:
+    return dateParser(list(raw_db.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
+        ("Published Timestamp", pymongo.ASCENDING)]))[0]["Published Timestamp"])
 
 
-def getDirectDependencies(groupId: str, artifactId: str, version: str):
+def get_project_before_config_direct_dependency(commit: str, config_filename: str) -> List:
+    diffs = db.wocCommit.find_one({"_id": commit})['diffs']
+    pom_blob = None
+    for diff in diffs:
+        if diff['filename'] == config_filename:
+            pom_blob = diff['oldBlob']
+    if not pom_blob:
+        return None
+    else:
+        direct_dependencies = db.wocPomBlob.find_one({'_id': pom_blob})['dependencies']
+        return direct_dependencies
+
+
+def get_project_before_other_direct_dependency(project: str, commit: str, config_filename: str) -> pd.DataFrame:
+    commits = db.wocRepository.find_one({"name": project.replace("/", "_")})['commits']
+    migration_time = get_commit_time(commit)
+    other_config_blobs = {}
+    dependencies = []
+    print(len(commits))
+    i = 0
+    for c in commits:
+        if (i % 100 == 0):
+            print(i)
+        i += 1
+        commit = db.wocCommit.find_one({"_id": c})
+        if commit is None:
+            continue
+        commit_time = commit['timestamp'].replace(tzinfo=pytz.timezone('UTC'))
+        if commit_time < migration_time:
+            diffs = commit['diffs']
+            for diff in diffs:
+                if re.search(r'pom.xml', diff['filename']) is not None and config_filename != diff['filename']:
+                    other_config_file = diff['filename']
+                    if diff['filename'] not in other_config_blobs.keys():
+                        other_config_blobs[other_config_file] = {"timestamp": commit_time, "blob": diff['newBlob']}
+                    else:
+                        if commit_time > other_config_blobs[other_config_file]['timestamp']:
+                            other_config_blobs[other_config_file]['timestamp'] = commit_time
+                            other_config_blobs[other_config_file]['blob'] = diff['newBlob']
+    for value in other_config_blobs.values():
+        if value['blob'] != "":
+            dependencies.extend(db.wocPomBlob.find_one({'_id': value['blob']})['dependencies'])
+    return pd.DataFrame(dependencies)
+
+
+def get_library_direct_dependency(groupId: str, artifactId: str, version: str) -> List[dict]:
     if version != "" and '$' not in version:
         return db.libraryVersionToDependency.find_one(
             {"groupId": groupId, "artifactId": artifactId, "version": version})['dependencies']
     else:
-        return db.libraryVersionToDependency.find_one(
-            {"groupId": groupId, "artifactId": artifactId})['dependencies']
+        return list(db.libraryVersionToDependency.find(
+            {"groupId": groupId, "artifactId": artifactId}, sort=[
+                ("version", pymongo.DESCENDING)]))[0]['dependencies']
 
 
-def getAllDependencies(groupId: str, artifactId: str, version: str):
-    dependencies = getDirectDependencies(groupId, artifactId, version)
-    tempDependencies = getDirectDependencies(groupId, artifactId, version)
-    while tempDependencies:
-        nowDependency = tempDependencies.pop(0)
-        newDependencies = getDirectDependencies(
-            nowDependency['groupId'], nowDependency['artifactId'], nowDependency['version'])
-        tempDependencies.extend(newDependencies)
-        for d in newDependencies:
+def get_project_before_config_all_dependencies(commit: str, config_filename: str) -> pd.DataFrame:
+    dependencies = get_project_before_config_direct_dependency(commit, config_filename)
+    temp_dependencies = get_project_before_config_direct_dependency(commit, config_filename)
+    while temp_dependencies:
+        now_dependency = temp_dependencies.pop(0)
+        new_dependencies = get_library_direct_dependency(
+            now_dependency['groupId'], now_dependency['artifactId'], now_dependency['version'])
+        temp_dependencies.extend(new_dependencies)
+        for d in new_dependencies:
             if d not in dependencies:
                 dependencies.append(d)
-    return dependencies
+    return pd.DataFrame(dependencies)
 
 
-def getLibraryRetentionRate(lib: str):  # 7 / 8?
+def index_1(migration_change: pd.Series, lib: str) -> int:
+    change_time = get_commit_time(migration_change['commit'])
+    library_nearest_time = get_library_nearest_published_time(lib, change_time)
+    return (change_time - library_nearest_time).days
+
+
+def index_2(migration_change: pd.Series, lib: str) -> int:
+    change_time = get_commit_time(migration_change['commit'])
+    library_first_time = get_library_first_published_time(lib, change_time)
+    return (change_time - library_first_time).days
+
+
+def index_5(migration_change: pd.Series, lib: str) -> int:
+    groupId, artifactId = lib.split(':')
+    all_dependencies = get_project_before_config_all_dependencies(
+        migration_change['commit'], migration_change['filename'])
+    if len(all_dependencies[(all_dependencies['groupId'] == groupId) & (all_dependencies['artifactId'] == artifactId)].index) == 0:
+        return 0
+    else:
+        return 1
+
+
+def index_6(migration_change: pd.Series, lib: str) -> int:
+    groupId, artifactId = lib.split(':')
+    other_direct_dependencies = get_project_before_other_direct_dependency(
+        migration_change['commit'], migration_change['filename'])
+    if len(other_direct_dependencies[(other_direct_dependencies['groupId'] == groupId) & (other_direct_dependencies['artifactId'] == artifactId)].index) == 0:
+        return 0
+    else:
+        return 1
+
+
+def get_library_retention_rate(lib: str, commit: str) -> float:  # 7
+    commit_time = get_commit_time(commit)
+    remove = len(get_migration_from_library(lib, commit_time))
+    add = len(get_migration_to_library(lib, commit_time))
+    if add == 0:
+        return float("-inf")
+    return 1 - remove / add
+
+
+def get_library_inflow_rate(lib: str, commit: str) -> float:  # 8
+    commit_time = get_commit_time(commit)
     add = len(list(db.wocConfirmedMigration.find(
-        {"toLib": lib})))
+        {"toLib": lib, "startCommitTime": {'$lt': commit_time}})))
     remove = len(list(db.wocConfirmedMigration.find(
-        {"fromLib": lib})))
-    return add/remove
+        {"fromLib": lib, "startCommitTime": {'$lt': commit_time}})))
+    return (add - remove) / (add + remove)
 
 
 if __name__ == '__main__':
-    # print(getMigrationToCommits('org.json:json')[0])
-    # print(type(getLibraryPublishTime("org.json:json")))
-    # s = rrule.rrule(rrule.SECONDLY, dtstart=dateParser(
-    #     "2010-12-21 17:46:08 UTC"), until=dateParser("2010-12-21 17:47:09 UTC")).count()
-    # print(getAllDependencies("org.json", "json", "20160212"))
-    print(getLibraryStayRate("org.json:json"))
+    print(get_library_nearest_published_time("commons-codec:commons-codec", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    print(get_library_first_published_time("commons-codec:commons-codec"))
+    print(get_project_before_config_all_dependencies("e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
+                                                     "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
+    print(get_project_before_other_direct_dependency("Snailclimb/JavaGuide", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
+                                                     "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
+    print(get_library_direct_dependency("org.json", "json", ""))
+    print(get_library_retention_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    print(get_library_inflow_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
