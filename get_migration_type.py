@@ -1,3 +1,4 @@
+import logging
 import semver
 import datautil
 import multiprocessing as mp
@@ -7,7 +8,9 @@ import pandas as pd
 def get_migration_type(from_lib: str, to_lib: str) -> str:
     fgid, faid = from_lib.split(":")
     tgid, taid = to_lib.split(":")
-    if faid in taid or taid in faid:  # seems like rename
+    
+
+    if len(set(faid.split("-")) & set(taid.split("-")) - {"api", "core", "all"}) != 0:  # seems like rename
         fversions = set(x["version"]
                         for x in datautil.select_library_versions(from_lib))
         tversions = set(x["version"]
@@ -15,21 +18,27 @@ def get_migration_type(from_lib: str, to_lib: str) -> str:
         print(sorted(fversions))
         print(sorted(tversions))
         if len(fversions & tversions) == 0:
-            if semver.compare(
-                    sorted(fversions)[-1], sorted(tversions)[-1]) == -1:
-                return "rename:upgrade"
-            else:
-                return "rename:downgrade"
-    return "normal"
+            try:
+                if semver.compare(
+                        sorted(fversions)[-1], sorted(tversions)[-1]) == -1:
+                    return "rename:upgrade"
+                else:
+                    return "rename:downgrade"
+            except Exception as ex:
+                logging.info(ex)
+        return "rename:undecided"
+    return "undecided"
 
 
 def run():
-    rules = pd.read_excel("data/rules.xlsx")
+    libraries = datautil.select_libraries()
+    rules = datautil.select_rules(set(libraries.name))
     with mp.Pool(mp.cpu_count() // 2) as pool:
-        rules["rules"] = pool.starmap(
+        rules["type"] = pool.starmap(
             get_migration_type, zip(
                 rules["fromLib"], rules["toLib"]))
     print(rules)
+    rules.to_csv("rules.csv", index=False)
 
 
 if __name__ == "__main__":
