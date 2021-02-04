@@ -5,21 +5,35 @@ import pandas as pd
 from dateutil.parser import parse as dateParser
 import datautil
 import re
+import numpy as np
+import matplotlib.pyplot as plt
 from typing import List, Set
+import csv
 MONGO_URL = "mongodb://127.0.0.1:27017"
 db = pymongo.MongoClient(MONGO_URL).migration_helper
 raw_db = pymongo.MongoClient(MONGO_URL).libraries
 
 
-def get_migration_to_library(lib: str, datetime: datetime) -> pd.DataFrame:
+def get_migration_to_library(lib: str) -> pd.DataFrame:
+    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    lib_required = migration_commits['lib2'].map(lambda x: x == lib)
+    migration_to_commits = migration_commits[lib_required]
+    return migration_to_commits
+
+def get_migration_to_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
     migration_commits = pd.read_csv('data/migration_changes.xlsx')
     lib_required = migration_commits['lib2'].map(lambda x: x == lib)
     date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
     migration_to_commits = migration_commits[lib_required & date_required]
     return migration_to_commits
 
+def get_migration_from_library(lib: str) -> pd.DataFrame:
+    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    lib_required = migration_commits['lib1'].map(lambda x: x == lib)
+    migration_from_commits = migration_commits[lib_required]
+    return migration_from_commits
 
-def get_migration_from_library(lib: str, datetime: datetime) -> pd.DataFrame:
+def get_migration_from_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
     migration_commits = pd.read_csv('data/migration_changes.xlsx')
     lib_required = migration_commits['lib1'].map(lambda x: x == lib)
     date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
@@ -36,8 +50,7 @@ def get_commit_time(commit: str) -> datetime:
         return None
 
 
-def get_library_nearest_published_time(lib: str, commit: str) -> datetime:
-    commit_time = get_commit_time(commit)
+def get_library_nearest_published_time(lib: str, commit_time: datetime) -> datetime:
     library_versions = raw_db.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
                                             ("Published Timestamp", pymongo.DESCENDING)])
     for library_version in library_versions:
@@ -120,15 +133,15 @@ def get_project_before_config_all_dependencies(commit: str, config_filename: str
     return pd.DataFrame(dependencies)
 
 
-def index_1(migration_change: pd.Series, lib: str) -> int:
-    change_time = get_commit_time(migration_change['commit'])
+def index_1(migration_change:np.ndarray, lib: str) -> int:
+    change_time = get_commit_time(migration_change[2])
     library_nearest_time = get_library_nearest_published_time(lib, change_time)
     return (change_time - library_nearest_time).days
 
 
-def index_2(migration_change: pd.Series, lib: str) -> int:
-    change_time = get_commit_time(migration_change['commit'])
-    library_first_time = get_library_first_published_time(lib, change_time)
+def index_2(migration_change: np.ndarray, lib: str) -> int:
+    change_time = get_commit_time(migration_change[2])
+    library_first_time = get_library_first_published_time(lib)
     return (change_time - library_first_time).days
 
 
@@ -144,7 +157,7 @@ def index_5(migration_change: pd.Series, lib: str) -> int:
 
 def index_6(migration_change: pd.Series, lib: str) -> int:
     groupId, artifactId = lib.split(':')
-    other_direct_dependencies = get_project_before_other_direct_dependency(
+    other_direct_dependencies = get_project_before_other_direct_dependency(migration_change['project'],
         migration_change['commit'], migration_change['filename'])
     if len(other_direct_dependencies[(other_direct_dependencies['groupId'] == groupId) & (other_direct_dependencies['artifactId'] == artifactId)].index) == 0:
         return 0
@@ -154,8 +167,8 @@ def index_6(migration_change: pd.Series, lib: str) -> int:
 
 def get_library_retention_rate(lib: str, commit: str) -> float:  # 7
     commit_time = get_commit_time(commit)
-    remove = len(get_migration_from_library(lib, commit_time))
-    add = len(get_migration_to_library(lib, commit_time))
+    remove = len(get_migration_from_library_before(lib, commit_time))
+    add = len(get_migration_to_library_before(lib, commit_time))
     if add == 0:
         return float("-inf")
     return 1 - remove / add
@@ -171,12 +184,25 @@ def get_library_inflow_rate(lib: str, commit: str) -> float:  # 8
 
 
 if __name__ == '__main__':
-    print(get_library_nearest_published_time("commons-codec:commons-codec", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
-    print(get_library_first_published_time("commons-codec:commons-codec"))
-    print(get_project_before_config_all_dependencies("e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
-                                                     "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
-    print(get_project_before_other_direct_dependency("Snailclimb/JavaGuide", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
-                                                     "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
-    print(get_library_direct_dependency("org.json", "json", ""))
-    print(get_library_retention_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
-    print(get_library_inflow_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    # print(get_library_nearest_published_time("commons-codec:commons-codec", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    # print(get_library_first_published_time("commons-codec:commons-codec"))
+    # print(get_project_before_config_all_dependencies("e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
+    #                                                  "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
+    # print(get_project_before_other_direct_dependency("Snailclimb/JavaGuide", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
+    #                                                  "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
+    # print(get_library_direct_dependency("org.json", "json", ""))
+    # print(get_library_retention_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    # print(get_library_inflow_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    lib = "org.json:json"
+    index1 = []
+    f = []
+    migrations_to_lib = get_migration_from_library(lib).values
+    for migration in migrations_to_lib:
+        index1.append(index_1(migration, lib))
+        f.append(0)
+    ff = open('index1.csv','a',encoding='utf-8',newline='')
+    csv_writer = csv.writer(ff)
+    print(len(index1))
+    for i in range(len(index1)):
+        csv_writer.writerow([index1[i], f[i]])
+    ff.close()
