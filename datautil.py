@@ -137,7 +137,7 @@ def select_dependency_changes(
 def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
     """If lib_names is not None, only keep dependency changes if both libraries are in the lib_names"""
     if os.path.exists(os.path.join(CACHE_DIR, "depchgs.csv")):
-        dep_changes = pd.read_csv(os.path.join(CACHE_DIR, "depchgs.csv"))
+        dep_changes = pd.read_csv(os.path.join(CACHE_DIR, "depchgs.csv"), low_memory=False)
     else:
         projects = select_projects_from_libraries_io()
         libraries = select_libraries_from_libraries_io()
@@ -149,6 +149,7 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
                 for proj_name in projects["nameWithOwner"]]
             )
         dep_changes = pd.concat(filter(lambda x: x is not None, results))
+        dep_changes.to_csv(os.path.join(CACHE_DIR, "depchgs.csv"), index=False)
     if lib_names is not None:
         lib_names = lib_names | set("")
         dep_changes = dep_changes[dep_changes.lib1.isin(lib_names) 
@@ -197,7 +198,7 @@ def select_migrations() -> pd.DataFrame:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    """
+    
     print(select_libraries_from_libraries_io())
     print(select_projects_from_libraries_io())
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
@@ -209,6 +210,5 @@ if __name__ == "__main__":
                                     set(select_libraries_from_libraries_io()["name"])))
     print(select_dependency_changes("bumptech/glide"))
     print(select_dependency_changes("dropwizard/dropwizard"))
-    """
-
+    
     print(select_library_dependencies("org.jboss.resteasy:resteasy-jackson-provider"))
