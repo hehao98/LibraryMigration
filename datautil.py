@@ -6,7 +6,7 @@ import pandas as pd
 from collections import Counter, defaultdict
 from typing import List, Set
 
-CACHE_DIR = "../cache/"
+CACHE_DIR = "cache/"
 MONGO_URL = "mongodb://127.0.0.1:27017"
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
