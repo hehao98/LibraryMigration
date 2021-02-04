@@ -3,17 +3,20 @@ import logging
 import pymongo
 import multiprocessing
 import pandas as pd
-from pprint import pprint
 from collections import Counter, defaultdict
-from queue import Queue
 from typing import List, Set
 
-
+CACHE_DIR = "cache/"
 MONGO_URL = "mongodb://127.0.0.1:27017"
+if not os.path.exists(CACHE_DIR):
+    os.mkdir(CACHE_DIR)
 
 
 def select_projects_from_libraries_io() -> pd.DataFrame:
     """Select a project dataframe as our research subject"""
+    if os.path.exists(os.path.join(CACHE_DIR, "projects.csv")):
+        return pd.read_csv(os.path.join(CACHE_DIR, "projects.csv"))
+
     db = pymongo.MongoClient(MONGO_URL).migration_helper
 
     projects = pd.DataFrame(list(db.lioRepository.find({
@@ -45,6 +48,7 @@ def select_projects_from_libraries_io() -> pd.DataFrame:
 
     projects["commitsCount"] = projects["_id"].map(
         lambda i: len(db.wocRepository.find_one({"_id": i})["commits"]))
+    projects.to_csv(os.path.join(CACHE_DIR, "projects.csv"), index=False)
     return projects
 
 
@@ -57,6 +61,22 @@ def select_libraries_from_libraries_io() -> pd.DataFrame:
     })))
     logging.debug(
         f"{len(libraries)} libraries with dependent repository count > 10")
+    return libraries
+
+
+def select_libraries() -> pd.DataFrame:
+    """Only keep libraries that has been added more than 10 times in our repository dataset"""
+    if os.path.exists(os.path.join(CACHE_DIR, "libraries.csv")):
+        return pd.read_csv(os.path.join(CACHE_DIR, "libraries.csv"))
+    libraries = select_libraries_from_libraries_io()
+    dep_changes = select_dependency_changes_all()
+    added_projects = defaultdict(set)
+    for idx, chg in dep_changes[dep_changes["type"] == "add"].iterrows():
+        added_projects[chg["lib2"]].add(chg["project"])
+    libraries["addedProjects"] = libraries["name"].map(lambda x: len(added_projects[x]))  
+    libraries["versionsCount"] = libraries["name"].map(lambda x: len(select_library_versions(x)))
+    libraries = libraries[libraries.addedProjects > 10].copy()
+    libraries.to_csv(os.path.join(CACHE_DIR, "libraries.csv"), index=False)
     return libraries
 
 
@@ -114,17 +134,25 @@ def select_dependency_changes(
     return results
 
 
-def select_dependency_changes_all() -> pd.DataFrame:
-    projects = select_projects_from_libraries_io()
-    libraries = select_libraries_from_libraries_io()
-    lib_names = set(libraries["name"])
-    with multiprocessing.Pool(32) as pool:
-        results = pool.starmap(
-            select_dependency_changes,
-            [(proj_name, lib_names)
-             for proj_name in projects["nameWithOwner"]]
-        )
-    dep_changes = pd.concat(filter(lambda x: x is not None, results))
+def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
+    """If lib_names is not None, only keep dependency changes if both libraries are in the lib_names"""
+    if os.path.exists(os.path.join(CACHE_DIR, "depchgs.csv")):
+        dep_changes = pd.read_csv(os.path.join(CACHE_DIR, "depchgs.csv"))
+    else:
+        projects = select_projects_from_libraries_io()
+        libraries = select_libraries_from_libraries_io()
+        lib_names = set(libraries["name"])
+        with multiprocessing.Pool(32) as pool:
+            results = pool.starmap(
+                select_dependency_changes,
+                [(proj_name, lib_names)
+                for proj_name in projects["nameWithOwner"]]
+            )
+        dep_changes = pd.concat(filter(lambda x: x is not None, results))
+    if lib_names is not None:
+        lib_names = lib_names | set("")
+        dep_changes = dep_changes[dep_changes.lib1.isin(lib_names) 
+                                  | dep_changes.lib2.isin(lib_names)]
     return dep_changes
 
 
@@ -143,26 +171,33 @@ def select_library_versions(lib_name: str) -> List[dict]:
     return list(db.libraryVersion.find({"groupArtifactId": idx}))
 
 
-def select_library_dependencies(lib_name: str) -> List[dict]:
+def select_library_dependencies(lib_name: str, transitive=False) -> List[dict]:
+    """NOTE: the version will only be kept as-is (i.e. no version resolution)"""
     db = pymongo.MongoClient(MONGO_URL).migration_helper
-    return list(db.lioProjectDependency.find({"projectName": lib_name}))
-
-
-def select_library_dependecies_transitive(lib_name: str) -> List[dict]:
-    logging.error("Not implemented yet")
-    return []
-
+    deps = list(db.lioProjectDependency.find({"projectName": lib_name}))
+    if not transitive:
+        return deps
+    libs = { x["dependencyName"]: x for x in deps }
+    resolved_libs = set()
+    while len(resolved_libs) != len(libs):
+        for lib in set(libs.keys()) - resolved_libs:
+            for dep in db.lioProjectDependency.find({"projectName": lib}):
+                if dep["dependencyName"] not in libs:
+                    libs[dep["dependencyName"]] = dep
+            resolved_libs.add(libs)
+    return list(libs.values())
+    
 
 def select_migrations() -> pd.DataFrame:
     migrations = pd.read_excel("data/migrations.xlsx", engine="openpyxl")
-    lib_names = set(select_libraries_from_libraries_io()["name"])
+    lib_names = set(select_libraries()["name"])
     return migrations[migrations["fromLib"].isin(
         lib_names) & migrations["toLib"].isin(lib_names)].copy()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-
+    """
     print(select_libraries_from_libraries_io())
     print(select_projects_from_libraries_io())
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
@@ -174,3 +209,6 @@ if __name__ == "__main__":
                                     set(select_libraries_from_libraries_io()["name"])))
     print(select_dependency_changes("bumptech/glide"))
     print(select_dependency_changes("dropwizard/dropwizard"))
+    """
+
+    print(select_library_dependencies("org.jboss.resteasy:resteasy-jackson-provider"))
