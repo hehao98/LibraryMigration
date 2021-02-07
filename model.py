@@ -10,31 +10,31 @@ import matplotlib.pyplot as plt
 from typing import List, Set
 import csv
 MONGO_URL = "mongodb://127.0.0.1:27017"
-db = pymongo.MongoClient(MONGO_URL).migration_helper
+db = pymongo.MongoClient(MONGO_URL, connect=False).migration_helper
 raw_db = pymongo.MongoClient(MONGO_URL).libraries
 
 
 def get_migration_to_library(lib: str) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
     lib_required = migration_commits['lib2'].map(lambda x: x == lib)
     migration_to_commits = migration_commits[lib_required]
     return migration_to_commits
 
 def get_migration_to_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
     lib_required = migration_commits['lib2'].map(lambda x: x == lib)
     date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
     migration_to_commits = migration_commits[lib_required & date_required]
     return migration_to_commits
 
 def get_migration_from_library(lib: str) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
     lib_required = migration_commits['lib1'].map(lambda x: x == lib)
     migration_from_commits = migration_commits[lib_required]
     return migration_from_commits
 
 def get_migration_from_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.xlsx')
+    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
     lib_required = migration_commits['lib1'].map(lambda x: x == lib)
     date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
     migration_from_commits = migration_commits[lib_required & date_required]
@@ -110,26 +110,44 @@ def get_project_before_other_direct_dependency(project: str, commit: str, config
 
 
 def get_library_direct_dependency(groupId: str, artifactId: str, version: str) -> List[dict]:
-    if version != "" and '$' not in version:
-        return db.libraryVersionToDependency.find_one(
-            {"groupId": groupId, "artifactId": artifactId, "version": version})['dependencies']
+    dependencies = []
+    projectName = groupId + ":" + artifactId
+    if version != "" and '$' not in version and '[' not in version:
+        results = list(db.lioProjectDependency.find(
+            {"projectName": projectName, "versionNumber": {'$regex' :f"{version}.*"}}, sort=[
+                ("version", pymongo.DESCENDING)]))        
     else:
-        return list(db.libraryVersionToDependency.find(
-            {"groupId": groupId, "artifactId": artifactId}, sort=[
-                ("version", pymongo.DESCENDING)]))[0]['dependencies']
+        results = list(db.lioProjectDependency.find(
+            {"projectName": projectName}, sort=[
+                ("version", pymongo.DESCENDING)]))
+    if results:
+        versionNumber = results[0]['versionNumber']
+        results = list(db.libraryVersionToDependency.find(
+                {"projectName": projectName, "versionNumber": versionNumber}))
+        for result in results:
+            groupId, artifactId = result["projectName"].split(":")
+            version = result["versionNumber"]
+            dependencies.append({"groupId":groupId,"artifactId":artifactId, "version":version})
+    return dependencies
+    
 
 
 def get_project_before_config_all_dependencies(commit: str, config_filename: str) -> pd.DataFrame:
-    dependencies = get_project_before_config_direct_dependency(commit, config_filename)
+    dependencies = []
     temp_dependencies = get_project_before_config_direct_dependency(commit, config_filename)
     while temp_dependencies:
         now_dependency = temp_dependencies.pop(0)
+        if now_dependency in dependencies:
+            continue
+        else:
+            dependencies.append(now_dependency)
         new_dependencies = get_library_direct_dependency(
             now_dependency['groupId'], now_dependency['artifactId'], now_dependency['version'])
-        temp_dependencies.extend(new_dependencies)
-        for d in new_dependencies:
-            if d not in dependencies:
-                dependencies.append(d)
+        if new_dependencies:
+            temp_dependencies.extend(new_dependencies)
+            for d in new_dependencies:
+                if d not in dependencies:
+                    dependencies.append(d)
     return pd.DataFrame(dependencies)
 
 
@@ -145,28 +163,28 @@ def index_2(migration_change: np.ndarray, lib: str) -> int:
     return (change_time - library_first_time).days
 
 
-def index_5(migration_change: pd.Series, lib: str) -> int:
+def index_5(migration_change: np.ndarray, lib: str) -> int:
     groupId, artifactId = lib.split(':')
     all_dependencies = get_project_before_config_all_dependencies(
-        migration_change['commit'], migration_change['filename'])
-    if len(all_dependencies[(all_dependencies['groupId'] == groupId) & (all_dependencies['artifactId'] == artifactId)].index) == 0:
+        migration_change[2], migration_change[3])
+    if len(all_dependencies) == 0 or len(all_dependencies[(all_dependencies['groupId'] == groupId) & (all_dependencies['artifactId'] == artifactId)].index) == 0:
         return 0
     else:
         return 1
 
 
-def index_6(migration_change: pd.Series, lib: str) -> int:
+def index_6(migration_change: np.ndarray, lib: str) -> int:
     groupId, artifactId = lib.split(':')
-    other_direct_dependencies = get_project_before_other_direct_dependency(migration_change['project'],
-        migration_change['commit'], migration_change['filename'])
+    other_direct_dependencies = get_project_before_other_direct_dependency(migration_change[1],
+        migration_change[2], migration_change[3])
     if len(other_direct_dependencies[(other_direct_dependencies['groupId'] == groupId) & (other_direct_dependencies['artifactId'] == artifactId)].index) == 0:
         return 0
     else:
         return 1
 
 
-def get_library_retention_rate(lib: str, commit: str) -> float:  # 7
-    commit_time = get_commit_time(commit)
+def get_library_retention_rate(migration_change:np.ndarray, lib: str) -> float:  # 7
+    commit_time = get_commit_time(migration_change[2])
     remove = len(get_migration_from_library_before(lib, commit_time))
     add = len(get_migration_to_library_before(lib, commit_time))
     if add == 0:
@@ -174,35 +192,24 @@ def get_library_retention_rate(lib: str, commit: str) -> float:  # 7
     return 1 - remove / add
 
 
-def get_library_inflow_rate(lib: str, commit: str) -> float:  # 8
-    commit_time = get_commit_time(commit)
+def get_library_inflow_rate(migration_change:np.ndarray, lib: str) -> float:  # 8
+    commit_time = get_commit_time(migration_change[2])
     add = len(list(db.wocConfirmedMigration.find(
         {"toLib": lib, "startCommitTime": {'$lt': commit_time}})))
     remove = len(list(db.wocConfirmedMigration.find(
         {"fromLib": lib, "startCommitTime": {'$lt': commit_time}})))
+    if add == 0 and remove == 0:
+        return 0
     return (add - remove) / (add + remove)
 
 
 if __name__ == '__main__':
     # print(get_library_nearest_published_time("commons-codec:commons-codec", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
     # print(get_library_first_published_time("commons-codec:commons-codec"))
-    # print(get_project_before_config_all_dependencies("e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
-    #                                                  "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
+    print(get_project_before_config_all_dependencies("7c65c5b167a85e28d21c58dc6c96c75bef04a444",
+                                                     "pom.xml"))
     # print(get_project_before_other_direct_dependency("Snailclimb/JavaGuide", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
     #                                                  "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
     # print(get_library_direct_dependency("org.json", "json", ""))
     # print(get_library_retention_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
     # print(get_library_inflow_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
-    lib = "org.json:json"
-    index1 = []
-    f = []
-    migrations_to_lib = get_migration_from_library(lib).values
-    for migration in migrations_to_lib:
-        index1.append(index_1(migration, lib))
-        f.append(0)
-    ff = open('index1.csv','a',encoding='utf-8',newline='')
-    csv_writer = csv.writer(ff)
-    print(len(index1))
-    for i in range(len(index1)):
-        csv_writer.writerow([index1[i], f[i]])
-    ff.close()
