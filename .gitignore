@@ -8,3 +8,4 @@ plots/
 __pycache__/
 .DS_Store
 tmp.xlsx
+data/migration_changes.csv
