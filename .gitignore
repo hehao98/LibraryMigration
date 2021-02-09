@@ -9,3 +9,6 @@ __pycache__/
 .DS_Store
 tmp.xlsx
 data/migration_changes.csv
+
+# save dataframe, ssh connection keeps breaking for no reason
+data/dep_change.csv
