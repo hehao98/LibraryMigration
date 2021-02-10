@@ -16,3 +16,4 @@ requests
 fake_useragent
 aiohttp
 nltk
+plyvel
