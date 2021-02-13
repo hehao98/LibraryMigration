@@ -1,8 +1,10 @@
 import os
+import pytz
 import logging
 import pymongo
 import multiprocessing
 import pandas as pd
+from datetime import datetime
 from collections import Counter, defaultdict
 from typing import List, Set, Tuple
 
@@ -106,7 +108,8 @@ def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
 def select_dependency_changes(
         project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame or None:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
-    commits_non_merge = {c["_id"]: c["timestamp"] for c in select_commits_by_project(project_name) if len(c["parents"]) < 2}
+    commits_non_merge = {c["_id"]: c["timestamp"]
+            for c in select_commits_by_project(project_name) if len(c["parents"]) < 2}
     results = []
     for dep_seq in db.wocDepSeq3.find(
             {"repoName": project_name.replace("/", "_")}):
@@ -177,7 +180,11 @@ def select_commits_by_project(project_name: str) -> List[dict]:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     commit_shas = list(db.wocRepository.find_one(
         {"name": project_name.replace("/", "_")})["commits"])
-    return list(db.wocCommit.find({"_id": {"$in": commit_shas}}))
+    commits = list(db.wocCommit.find({"_id": {"$in": commit_shas}}))
+    for c in commits:
+        if type(c["timestamp"]) == datetime:
+            c["timestamp"] = c["timestamp"].replace(tzinfo=pytz.timezone("UTC"))
+    return commits
 
 
 def select_library_versions(lib_name: str) -> List[dict]:
@@ -224,7 +231,7 @@ if __name__ == "__main__":
     print(select_projects_from_libraries_io())
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
 
-    select_commits_by_project("square/okhttp")
+    print(select_commits_by_project("square/okhttp")[0:10])
 
     print(select_dependency_changes("square/okhttp"))
     print(select_dependency_changes("square/okhttp",
