@@ -1,46 +1,55 @@
-from datetime import datetime
 import pymongo
 import pytz
+import numpy as np
 import pandas as pd
+from datetime import datetime
 from dateutil.parser import parse as dateParser
 import datautil
 import re
-import numpy as np
-import matplotlib.pyplot as plt
 from typing import List, Set
-import csv
+import multiprocessing
+from itertools import repeat
+from pathos.pools import ProcessPool
+import time
+from tqdm import tqdm
+
 MONGO_URL = "mongodb://127.0.0.1:27017"
-db = pymongo.MongoClient(MONGO_URL, connect=False).migration_helper
-raw_db = pymongo.MongoClient(MONGO_URL).libraries
+db = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).migration_helper
+raw_db = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).libraries
+migration_commits = pd.read_csv('data/migration_changes_with_time.csv', dtype=object)
+migration_commits_values = migration_commits.values
 
-
-def get_migration_to_library(migration_commits, lib: str) -> pd.DataFrame:
-    # migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
+def get_migration_to_library(lib: str) -> pd.DataFrame:
     lib_required = migration_commits['lib2'].map(lambda x: x == lib)
-    migration_to_commits = migration_commits[lib_required]
+    type_required = migration_commits['type'].map(lambda x: x == 'add')
+    migration_to_commits = migration_commits[lib_required & type_required]
     return migration_to_commits
 
-def get_migration_to_library_before(migration_commits, lib: str, datetime: datetime) -> pd.DataFrame:
-    # migration_commits = pd.read_csv('data/migration_changes_with_time.csv', dtype=object)
+def get_migration_to_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
     datetime = str(datetime)
-    lib_required = migration_commits['lib2'].map(lambda x: x == lib)
-    date_required = migration_commits['commit_time'].map(lambda x: x < datetime)
-    migration_to_commits = migration_commits[lib_required & date_required]
+    migration_to_commits_before = migration_commits_values[(migration_commits_values[:, -1] < str(datetime)) & (migration_commits_values[:, 5] == lib) &( migration_commits_values[:, 3] == 'add')]
+    return len(migration_to_commits_before)
+
+def get_migration_to()->np.ndarray:
+    type_required = migration_commits['type'].map(lambda x: x == 'add')
+    migration_to_commits = migration_commits[type_required]
     return migration_to_commits
 
-def get_migration_from_library(migration_commits, lib: str) -> pd.DataFrame:
-    # migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
-    lib_required = migration_commits['lib1'].map(lambda x: x == lib)
-    migration_from_commits = migration_commits[lib_required]
+def get_migration_from()->np.ndarray:
+    type_required = migration_commits['type'].map(lambda x: x == 'rem')
+    migration_from_commits = migration_commits[type_required]
     return migration_from_commits
 
-def get_migration_from_library_before(migration_commits, lib: str, datetime: datetime) -> pd.DataFrame:
-    # migration_commits = pd.read_csv('data/migration_changes_with_time.csv', dtype=object)
-    datetime = str(datetime)
+def get_migration_from_library(lib: str) -> pd.DataFrame:
+    type_required = migration_commits['type'].map(lambda x: x == 'rem')
     lib_required = migration_commits['lib1'].map(lambda x: x == lib)
-    date_required = migration_commits['commit_time'].map(lambda x:x < datetime)
-    migration_from_commits = migration_commits[lib_required & date_required]
+    migration_from_commits = migration_commits[lib_required & type_required]
     return migration_from_commits
+
+def get_migration_from_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
+    datetime = str(datetime)
+    migration_from_commits_before = migration_commits_values[(migration_commits_values[:, -1] < str(datetime)) & (migration_commits_values[:, 4] == lib) &( migration_commits_values[:, 3] == 'rem')]
+    return len(migration_from_commits_before)
 
 
 def get_commit_time(commit: str) -> datetime:
@@ -53,7 +62,8 @@ def get_commit_time(commit: str) -> datetime:
 
 
 def get_library_nearest_published_time(lib: str, commit_time: datetime) -> datetime:
-    library_versions = list(raw_db.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
+    raw_dbt = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=None).libraries
+    library_versions = list(raw_dbt.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
                                             ("Published Timestamp", pymongo.DESCENDING)]))
     for library_version in library_versions:
         published_time = dateParser(library_version['Published Timestamp'])
@@ -155,7 +165,7 @@ def get_project_before_config_all_dependencies(commit: str, config_filename: str
 
 
 def index_1(migration_change:np.ndarray, lib: str) -> int:
-    change_time = dateParser(migration_change[-1])
+    change_time = dateParser(migration_change[8])
     library_nearest_time = get_library_nearest_published_time(lib, change_time)
     if library_nearest_time:
         return (change_time - library_nearest_time).days
@@ -164,7 +174,33 @@ def index_1(migration_change:np.ndarray, lib: str) -> int:
 
 
 def index_2(migration_change: np.ndarray, lib: str) -> int:
-    change_time = get_commit_time(migration_change[2])
+    change_time = dateParser(migration_change[8])
+    library_first_time = get_library_first_published_time(lib)
+    return (change_time - library_first_time).days
+
+def index_1_all(migration_change:np.ndarray) -> int:
+    if migration_change[3] == 'add':
+        lib = migration_change[5]
+    elif migration_change[3] == 'rem':
+        lib = migration_change[4]
+    else:
+        return np.nan
+    change_time = dateParser(migration_change[8])
+    library_nearest_time = get_library_nearest_published_time(lib, change_time)
+    if library_nearest_time:
+        return (change_time - library_nearest_time).days
+    else:
+        return np.nan
+
+
+def index_2_all(migration_change: np.ndarray) -> int:
+    if migration_change[3] == 'add':
+        lib = migration_change[5]
+    elif migration_change[3] == 'rem':
+        lib = migration_change[4]
+    else:
+        return np.nan
+    change_time = dateParser(migration_change[8])
     library_first_time = get_library_first_published_time(lib)
     return (change_time - library_first_time).days
 
@@ -189,34 +225,104 @@ def index_6(migration_change: np.ndarray, lib: str) -> int:
         return 1
 
 
-def get_library_retention_rate(migration_commits, migration_change:np.ndarray, lib: str) -> float:  # 7
+def get_library_retention_rate(migration_change:np.ndarray, lib: str) -> float:  # 7
     # commit_time = get_commit_time(migration_change[2])
-    commit_time = migration_change[-1]
-    remove = len(get_migration_from_library_before(migration_commits, lib, commit_time))
-    add = len(get_migration_to_library_before(migration_commits, lib, commit_time))
-    if add == 0:
-        return float("-inf")
-    return 1 - remove / add
+    commit_time = migration_change[8]
+    remove = get_migration_from_library_before(lib, commit_time)
+    add = get_migration_to_library_before(lib, commit_time)
+#     if add == 0:
+#         return float("-inf")
+#     return 1 - remove / add
+    if add == 0 and remove == 0:
+        return 0
+    return add / (add + remove)
 
 
 def get_library_inflow_rate(migration_change:np.ndarray, lib: str) -> float:  # 8
-    commit_time = get_commit_time(migration_change[2])
-    add = len(list(db.wocConfirmedMigration.find(
+    dbt = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).migration_helper
+    commit_time = dateParser(migration_change[8])
+    add = len(list(dbt.wocConfirmedMigration.find(
         {"toLib": lib, "startCommitTime": {'$lt': commit_time}})))
-    remove = len(list(db.wocConfirmedMigration.find(
+    remove = len(list(dbt.wocConfirmedMigration.find(
         {"fromLib": lib, "startCommitTime": {'$lt': commit_time}})))
     if add == 0 and remove == 0:
         return 0
     return (add - remove) / (add + remove)
 
+def get_library_retention_rate_all(migration_change:np.ndarray) -> float:  # 7
+    if migration_change[3] == 'add':
+        lib = migration_change[5]
+    elif migration_change[3] == 'rem':
+        lib = migration_change[4]
+    else:
+        return np.nan
+    commit_time = migration_change[8]
+    remove = get_migration_from_library_before(lib, commit_time)
+    add = get_migration_to_library_before(lib, commit_time)
+#     if add == 0:
+#         return float("-inf")
+#     return 1 - remove / add
+    if add == 0 and remove == 0:
+        return 0
+    return add / (add + remove)
 
+
+def get_library_inflow_rate_all(migration_change:np.ndarray) -> float:  # 8
+    dbt = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=None).migration_helper
+    if migration_change[3] == 'add':
+        lib = migration_change[5]
+    elif migration_change[3] == 'rem':
+        lib = migration_change[4]
+    else:
+        return np.nan
+    commit_time = dateParser(migration_change[8])
+    add = len(list(dbt.wocConfirmedMigration.find(
+        {"toLib": lib, "startCommitTime": {'$lt': commit_time}})))
+    remove = len(list(dbt.wocConfirmedMigration.find(
+        {"fromLib": lib, "startCommitTime": {'$lt': commit_time}})))
+    if add == 0 and remove == 0:
+        return 0
+    return (add - remove) / (add + remove)
+
+def parallel(func, *args, show=False):
+    pool = ProcessPool(48)
+    try:
+        if show:
+            start = time.time()
+            # imap方法
+            with tqdm(total=len(args[0]), desc="计算进度") as t:  # 进度条设置
+                r = []
+                for i in pool.imap(func, *args):
+                    r.append(i)
+                    t.set_postfix({'并行函数': func.__name__, "计算花销": "%ds" % (time.time() - start)})
+                    t.update()
+            return r
+        else:
+            r = pool.map(func, *args)
+            return r
+    except Exception as e:
+        print(e)
+    finally:
+        # 关闭池
+        pool.close()  # close the pool to any new jobs
+        pool.join()  # cleanup the closed worker processes
+        pool.clear()  # Remove server with matching state
+
+
+
+        
 if __name__ == '__main__':
-    print(get_library_nearest_published_time("com.alibaba:fastjson", get_commit_time("10052d468760f2f952064289719286d3ba608693")))
-    # print(get_library_first_published_time("commons-codec:commons-codec"))
-    # print(get_project_before_config_all_dependencies("7c65c5b167a85e28d21c58dc6c96c75bef04a444",
-    #                                                  "pom.xml"))
-    # print(get_project_before_other_direct_dependency("Snailclimb/JavaGuide", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
-    #                                                  "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
-    # print(get_library_direct_dependency("org.json", "json", ""))
-    # print(get_library_retention_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
-    # print(get_library_inflow_rate("junit:junit", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    print('start')
+    index = [get_library_retention_rate_all, get_library_inflow_rate_all]
+    for f in index:
+        name = f.__name__[:-4]
+        print(f.__name__[:-4])
+        index = np.array([])
+        start = time.time()
+        data = migration_commits_values
+        index = np.append(index, parallel(f, data))
+        dataf = pd.DataFrame(data)
+        print(f'timecost: {time.time() - start}')
+        dataf[name] = index
+        print(dataf.head(5))
+        dataf.to_csv(f'data/migration_changes_with_{name}.csv', index=False)
