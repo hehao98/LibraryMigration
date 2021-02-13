@@ -4,12 +4,22 @@ import pymongo
 import multiprocessing
 import pandas as pd
 from collections import Counter, defaultdict
-from typing import List, Set
+from typing import List, Set, Tuple
 
 CACHE_DIR = "cache/"
 MONGO_URL = "mongodb://127.0.0.1:27017"
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
+
+
+def get_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    projects = select_projects_from_libraries_io()
+    libraries = select_libraries()
+    migrations = select_migrations()
+    lib_names = set(libraries["name"])
+    rules = select_rules(lib_names)
+    dep_changes = select_dependency_changes_all(lib_names) 
+    return projects, libraries, rules, dep_changes
 
 
 def select_projects_from_libraries_io() -> pd.DataFrame:
@@ -90,8 +100,7 @@ def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
 def select_dependency_changes(
         project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame or None:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
-    commits_non_merge = set(
-        c["_id"] for c in select_commits_by_project(project_name) if len(c["parents"]) < 2)
+    commits_non_merge = {c["_id"]: c["timestamp"] for c in select_commits_by_project(project_name) if len(c["parents"]) < 2}
     results = []
     for dep_seq in db.wocDepSeq3.find(
             {"repoName": project_name.replace("/", "_")}):
@@ -101,6 +110,7 @@ def select_dependency_changes(
             for change in item["versionChanges"]:
                 row = {
                     "project": project_name,
+                    "timestamp": commits_non_merge[item["commit"]],
                     "commit": item["commit"],
                     "file": dep_seq["fileName"],
                     "type": "",
@@ -197,7 +207,7 @@ def select_migrations() -> pd.DataFrame:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    """
+    
     print(select_libraries_from_libraries_io())
     print(select_projects_from_libraries_io())
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
@@ -209,6 +219,7 @@ if __name__ == "__main__":
                                     set(select_libraries_from_libraries_io()["name"])))
     print(select_dependency_changes("bumptech/glide"))
     print(select_dependency_changes("dropwizard/dropwizard"))
-    """
-
+    
     print(select_library_dependencies("org.jboss.resteasy:resteasy-jackson-provider"))
+
+    print(len(select_dependency_changes_all()))
