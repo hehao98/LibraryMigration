@@ -14,29 +14,31 @@ db = pymongo.MongoClient(MONGO_URL, connect=False).migration_helper
 raw_db = pymongo.MongoClient(MONGO_URL).libraries
 
 
-def get_migration_to_library(lib: str) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
+def get_migration_to_library(migration_commits, lib: str) -> pd.DataFrame:
+    # migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
     lib_required = migration_commits['lib2'].map(lambda x: x == lib)
     migration_to_commits = migration_commits[lib_required]
     return migration_to_commits
 
-def get_migration_to_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
+def get_migration_to_library_before(migration_commits, lib: str, datetime: datetime) -> pd.DataFrame:
+    # migration_commits = pd.read_csv('data/migration_changes_with_time.csv', dtype=object)
+    datetime = str(datetime)
     lib_required = migration_commits['lib2'].map(lambda x: x == lib)
-    date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
+    date_required = migration_commits['commit_time'].map(lambda x: x < datetime)
     migration_to_commits = migration_commits[lib_required & date_required]
     return migration_to_commits
 
-def get_migration_from_library(lib: str) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
+def get_migration_from_library(migration_commits, lib: str) -> pd.DataFrame:
+    # migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
     lib_required = migration_commits['lib1'].map(lambda x: x == lib)
     migration_from_commits = migration_commits[lib_required]
     return migration_from_commits
 
-def get_migration_from_library_before(lib: str, datetime: datetime) -> pd.DataFrame:
-    migration_commits = pd.read_csv('data/migration_changes.csv', dtype=object)
+def get_migration_from_library_before(migration_commits, lib: str, datetime: datetime) -> pd.DataFrame:
+    # migration_commits = pd.read_csv('data/migration_changes_with_time.csv', dtype=object)
+    datetime = str(datetime)
     lib_required = migration_commits['lib1'].map(lambda x: x == lib)
-    date_required = migration_commits['commit'].map(lambda x: get_commit_time(x) < datetime)
+    date_required = migration_commits['commit_time'].map(lambda x:x < datetime)
     migration_from_commits = migration_commits[lib_required & date_required]
     return migration_from_commits
 
@@ -51,12 +53,13 @@ def get_commit_time(commit: str) -> datetime:
 
 
 def get_library_nearest_published_time(lib: str, commit_time: datetime) -> datetime:
-    library_versions = raw_db.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
-                                            ("Published Timestamp", pymongo.DESCENDING)])
+    library_versions = list(raw_db.versions.find({"Platform": "Maven", "Project Name": lib}, sort=[
+                                            ("Published Timestamp", pymongo.DESCENDING)]))
     for library_version in library_versions:
         published_time = dateParser(library_version['Published Timestamp'])
         if published_time < commit_time:
             return published_time
+    return None
 
 
 def get_library_first_published_time(lib: str) -> datetime:
@@ -152,9 +155,12 @@ def get_project_before_config_all_dependencies(commit: str, config_filename: str
 
 
 def index_1(migration_change:np.ndarray, lib: str) -> int:
-    change_time = get_commit_time(migration_change[2])
+    change_time = dateParser(migration_change[-1])
     library_nearest_time = get_library_nearest_published_time(lib, change_time)
-    return (change_time - library_nearest_time).days
+    if library_nearest_time:
+        return (change_time - library_nearest_time).days
+    else:
+        return np.nan
 
 
 def index_2(migration_change: np.ndarray, lib: str) -> int:
@@ -183,10 +189,11 @@ def index_6(migration_change: np.ndarray, lib: str) -> int:
         return 1
 
 
-def get_library_retention_rate(migration_change:np.ndarray, lib: str) -> float:  # 7
-    commit_time = get_commit_time(migration_change[2])
-    remove = len(get_migration_from_library_before(lib, commit_time))
-    add = len(get_migration_to_library_before(lib, commit_time))
+def get_library_retention_rate(migration_commits, migration_change:np.ndarray, lib: str) -> float:  # 7
+    # commit_time = get_commit_time(migration_change[2])
+    commit_time = migration_change[-1]
+    remove = len(get_migration_from_library_before(migration_commits, lib, commit_time))
+    add = len(get_migration_to_library_before(migration_commits, lib, commit_time))
     if add == 0:
         return float("-inf")
     return 1 - remove / add
@@ -204,10 +211,10 @@ def get_library_inflow_rate(migration_change:np.ndarray, lib: str) -> float:  # 
 
 
 if __name__ == '__main__':
-    # print(get_library_nearest_published_time("commons-codec:commons-codec", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6"))
+    print(get_library_nearest_published_time("com.alibaba:fastjson", get_commit_time("10052d468760f2f952064289719286d3ba608693")))
     # print(get_library_first_published_time("commons-codec:commons-codec"))
-    print(get_project_before_config_all_dependencies("7c65c5b167a85e28d21c58dc6c96c75bef04a444",
-                                                     "pom.xml"))
+    # print(get_project_before_config_all_dependencies("7c65c5b167a85e28d21c58dc6c96c75bef04a444",
+    #                                                  "pom.xml"))
     # print(get_project_before_other_direct_dependency("Snailclimb/JavaGuide", "e8aeaef43cbfb2b8a9b71c7b7f462c48b4adb9a6",
     #                                                  "docs/dataStructures-algorithms/source code/securityAlgorithm/pom.xml"))
     # print(get_library_direct_dependency("org.json", "json", ""))
