@@ -6,20 +6,26 @@ import pandas as pd
 from collections import Counter, defaultdict
 from typing import List, Set, Tuple
 
+
 CACHE_DIR = "cache/"
 MONGO_URL = "mongodb://127.0.0.1:27017"
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
 
 
-def get_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Returns (projects, libraries, migrations, rules, dep_changes).
+    This function should be used get the required data for analysis,
+        to avoid data scope inconsistencies in different analysis modules.
+    """
     projects = select_projects_from_libraries_io()
     libraries = select_libraries()
     migrations = select_migrations()
     lib_names = set(libraries["name"])
     rules = select_rules(lib_names)
     dep_changes = select_dependency_changes_all(lib_names) 
-    return projects, libraries, rules, dep_changes
+    return projects, libraries, migrations, rules, dep_changes
 
 
 def select_projects_from_libraries_io() -> pd.DataFrame:
@@ -151,11 +157,11 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
     else:
         projects = select_projects_from_libraries_io()
         libraries = select_libraries_from_libraries_io()
-        lib_names = set(libraries["name"])
+        lib_names2 = set(libraries["name"])
         with multiprocessing.Pool(32) as pool:
             results = pool.starmap(
                 select_dependency_changes,
-                [(proj_name, lib_names)
+                [(proj_name, lib_names2)
                 for proj_name in projects["nameWithOwner"]]
             )
         dep_changes = pd.concat(filter(lambda x: x is not None, results))
@@ -229,3 +235,4 @@ if __name__ == "__main__":
     print(select_library_dependencies("org.jboss.resteasy:resteasy-jackson-provider"))
 
     print(len(select_dependency_changes_all()))
+    print(get_data())
