@@ -147,7 +147,7 @@ def select_dependency_changes(
 def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
     """If lib_names is not None, only keep dependency changes if both libraries are in the lib_names"""
     if os.path.exists(os.path.join(CACHE_DIR, "depchgs.csv")):
-        dep_changes = pd.read_csv(os.path.join(CACHE_DIR, "depchgs.csv"))
+        dep_changes = pd.read_csv(os.path.join(CACHE_DIR, "depchgs.csv"), low_memory=False).fillna("")
     else:
         projects = select_projects_from_libraries_io()
         libraries = select_libraries_from_libraries_io()
@@ -159,6 +159,7 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
                 for proj_name in projects["nameWithOwner"]]
             )
         dep_changes = pd.concat(filter(lambda x: x is not None, results))
+        dep_changes.to_csv(os.path.join(CACHE_DIR, "depchgs.csv"), index=False)
     if lib_names is not None:
         lib_names = lib_names | set("")
         dep_changes = dep_changes[dep_changes.lib1.isin(lib_names) 
@@ -196,6 +197,11 @@ def select_library_dependencies(lib_name: str, transitive=False) -> List[dict]:
                     libs[dep["dependencyName"]] = dep
             resolved_libs.add(libs)
     return list(libs.values())
+
+
+def select_project_dependencies(proj_name: str) -> List[dict]:
+    db = pymongo.MongoClient(MONGO_URL).migration_helper
+    return list(db.lioRepositoryDependency.find({"repositoryNameWithOwner": proj_name}))
     
 
 def select_migrations() -> pd.DataFrame:

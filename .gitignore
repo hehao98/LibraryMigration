@@ -9,3 +9,4 @@ __pycache__/
 .DS_Store
 tmp.xlsx
 data/migration_changes*.csv
+data/migration_changes.csv
