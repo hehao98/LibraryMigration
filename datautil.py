@@ -1,15 +1,33 @@
 import os
+import pytz
 import logging
 import pymongo
 import multiprocessing
 import pandas as pd
+from datetime import datetime
 from collections import Counter, defaultdict
-from typing import List, Set
+from typing import List, Set, Tuple
+
 
 CACHE_DIR = "cache/"
 MONGO_URL = "mongodb://127.0.0.1:27017"
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
+
+
+def get_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Returns (projects, libraries, migrations, rules, dep_changes).
+    This function should be used get the required data for analysis,
+        to avoid data scope inconsistencies in different analysis modules.
+    """
+    projects = select_projects_from_libraries_io()
+    libraries = select_libraries()
+    migrations = select_migrations()
+    lib_names = set(libraries["name"])
+    rules = select_rules(lib_names)
+    dep_changes = select_dependency_changes_all(lib_names) 
+    return projects, libraries, migrations, rules, dep_changes
 
 
 def select_projects_from_libraries_io() -> pd.DataFrame:
@@ -90,8 +108,8 @@ def select_rules(valid_libs: Set[str]) -> pd.DataFrame:
 def select_dependency_changes(
         project_name: str, valid_libs: Set[str] = None) -> pd.DataFrame or None:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
-    commits_non_merge = set(
-        c["_id"] for c in select_commits_by_project(project_name) if len(c["parents"]) < 2)
+    commits_non_merge = {c["_id"]: c["timestamp"]
+            for c in select_commits_by_project(project_name) if len(c["parents"]) < 2}
     results = []
     for dep_seq in db.wocDepSeq3.find(
             {"repoName": project_name.replace("/", "_")}):
@@ -101,6 +119,7 @@ def select_dependency_changes(
             for change in item["versionChanges"]:
                 row = {
                     "project": project_name,
+                    "timestamp": commits_non_merge[item["commit"]],
                     "commit": item["commit"],
                     "file": dep_seq["fileName"],
                     "type": "",
@@ -141,11 +160,11 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
     else:
         projects = select_projects_from_libraries_io()
         libraries = select_libraries_from_libraries_io()
-        lib_names = set(libraries["name"])
+        lib_names2 = set(libraries["name"])
         with multiprocessing.Pool(32) as pool:
             results = pool.starmap(
                 select_dependency_changes,
-                [(proj_name, lib_names)
+                [(proj_name, lib_names2)
                 for proj_name in projects["nameWithOwner"]]
             )
         dep_changes = pd.concat(filter(lambda x: x is not None, results))
@@ -161,7 +180,11 @@ def select_commits_by_project(project_name: str) -> List[dict]:
     db = pymongo.MongoClient(MONGO_URL).migration_helper
     commit_shas = list(db.wocRepository.find_one(
         {"name": project_name.replace("/", "_")})["commits"])
-    return list(db.wocCommit.find({"_id": {"$in": commit_shas}}))
+    commits = list(db.wocCommit.find({"_id": {"$in": commit_shas}}))
+    for c in commits:
+        if type(c["timestamp"]) == datetime:
+            c["timestamp"] = c["timestamp"].replace(tzinfo=pytz.timezone("UTC"))
+    return commits
 
 
 def select_library_versions(lib_name: str) -> List[dict]:
@@ -208,7 +231,7 @@ if __name__ == "__main__":
     print(select_projects_from_libraries_io())
     print(select_rules(set(select_libraries_from_libraries_io()["name"])))
 
-    select_commits_by_project("square/okhttp")
+    print(select_commits_by_project("square/okhttp")[0:10])
 
     print(select_dependency_changes("square/okhttp"))
     print(select_dependency_changes("square/okhttp",
@@ -217,3 +240,6 @@ if __name__ == "__main__":
     print(select_dependency_changes("dropwizard/dropwizard"))
     
     print(select_library_dependencies("org.jboss.resteasy:resteasy-jackson-provider"))
+
+    print(len(select_dependency_changes_all()))
+    print(get_data())
