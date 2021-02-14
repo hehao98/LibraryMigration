@@ -3,133 +3,40 @@ import re
 import pymongo
 import pytz
 import logging
+import functools
 import datautil
-import numpy as np
 import pandas as pd
 import multiprocessing as mp
+from copy import deepcopy
 from datetime import datetime
 from dateutil.parser import parse as dateParser
 from collections import defaultdict
-from typing import List
+from typing import Tuple
 from lxml import etree
 
 
-def get_project_before_config_direct_dependency(commit: str, config_filename: str) -> List:
-    diffs = db.wocCommit.find_one({"_id": commit})['diffs']
-    pom_blob = None
-    for diff in diffs:
-        if diff['filename'] == config_filename:
-            pom_blob = diff['oldBlob']
-    if not pom_blob:
-        return None
-    else:
-        direct_dependencies = db.wocPomBlob.find_one({'_id': pom_blob})['dependencies']
-        return direct_dependencies
-
-
-def get_project_before_other_direct_dependency(project: str, commit: str, config_filename: str) -> pd.DataFrame:
-    commits = db.wocRepository.find_one({"name": project.replace("/", "_")})['commits']
-    migration_time = get_commit_time(commit)
-    other_config_blobs = {}
-    dependencies = []
-    print(len(commits))
-    i = 0
-    for c in commits:
-        if (i % 100 == 0):
-            print(i)
-        i += 1
-        commit = db.wocCommit.find_one({"_id": c})
-        if commit is None:
-            continue
-        commit_time = commit['timestamp'].replace(tzinfo=pytz.timezone('UTC'))
-        if commit_time < migration_time:
-            diffs = commit['diffs']
-            for diff in diffs:
-                if re.search(r'pom.xml', diff['filename']) is not None and config_filename != diff['filename']:
-                    other_config_file = diff['filename']
-                    if diff['filename'] not in other_config_blobs.keys():
-                        other_config_blobs[other_config_file] = {"timestamp": commit_time, "blob": diff['newBlob']}
-                    else:
-                        if commit_time > other_config_blobs[other_config_file]['timestamp']:
-                            other_config_blobs[other_config_file]['timestamp'] = commit_time
-                            other_config_blobs[other_config_file]['blob'] = diff['newBlob']
-    for value in other_config_blobs.values():
-        if value['blob'] != "":
-            dependencies.extend(db.wocPomBlob.find_one({'_id': value['blob']})['dependencies'])
-    return pd.DataFrame(dependencies)
-
-
-def get_library_direct_dependency(groupId: str, artifactId: str, version: str) -> List[dict]:
-    dependencies = []
-    projectName = groupId + ":" + artifactId
-    if version != "" and '$' not in version and '[' not in version:
-        results = list(db.lioProjectDependency.find(
-            {"projectName": projectName, "versionNumber": {'$regex' :f"{version}.*"}}, sort=[
-                ("version", pymongo.DESCENDING)]))        
-    else:
-        results = list(db.lioProjectDependency.find(
-            {"projectName": projectName}, sort=[
-                ("version", pymongo.DESCENDING)]))
-    if results:
-        versionNumber = results[0]['versionNumber']
-        results = list(db.libraryVersionToDependency.find(
-                {"projectName": projectName, "versionNumber": versionNumber}))
-        for result in results:
-            groupId, artifactId = result["projectName"].split(":")
-            version = result["versionNumber"]
-            dependencies.append({"groupId":groupId,"artifactId":artifactId, "version":version})
-    return dependencies
-    
-
-
-def get_project_before_config_all_dependencies(commit: str, config_filename: str) -> pd.DataFrame:
-    dependencies = []
-    temp_dependencies = get_project_before_config_direct_dependency(commit, config_filename)
-    while temp_dependencies:
-        now_dependency = temp_dependencies.pop(0)
-        if now_dependency in dependencies:
-            continue
-        else:
-            dependencies.append(now_dependency)
-        new_dependencies = get_library_direct_dependency(
-            now_dependency['groupId'], now_dependency['artifactId'], now_dependency['version'])
-        if new_dependencies:
-            temp_dependencies.extend(new_dependencies)
-            for d in new_dependencies:
-                if d not in dependencies:
-                    dependencies.append(d)
-    return pd.DataFrame(dependencies)
-
-
-def index_5(migration_change: np.ndarray, lib: str) -> int:
-    groupId, artifactId = lib.split(':')
-    all_dependencies = get_project_before_config_all_dependencies(
-        migration_change[2], migration_change[3])
-    if len(all_dependencies) == 0 or len(all_dependencies[(all_dependencies['groupId'] == groupId) & (all_dependencies['artifactId'] == artifactId)].index) == 0:
-        return 0
-    else:
-        return 1
-
-
-def index_6(migration_change: np.ndarray, lib: str) -> int:
-    groupId, artifactId = lib.split(':')
-    other_direct_dependencies = get_project_before_other_direct_dependency(migration_change[1],
-        migration_change[2], migration_change[3])
-    if len(other_direct_dependencies[(other_direct_dependencies['groupId'] == groupId) & (other_direct_dependencies['artifactId'] == artifactId)].index) == 0:
-        return 0
-    else:
-        return 1
-
-
 MONGO_URL = "mongodb://127.0.0.1:27017"
-db = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).migration_helper
-dblio = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).libraries
 lib2versions = defaultdict(list)
 lib2vulnerabilities = defaultdict(list)
 lib2adoptions = defaultdict(pd.Series)
 lib2removals = defaultdict(pd.Series)
 lib2migrations = defaultdict(set)
 lib2license = defaultdict(str)
+lib2deps = defaultdict(lambda : defaultdict(dict))      # group_id:artifact_id -> version -> {groupId:artifactId: version}
+lib2transdeps = defaultdict(lambda : defaultdict(dict)) # group_id:artifact_id -> version -> {groupId:artifactId: version}
+
+
+def lru_cache(maxsize=128, typed=False, copy=False):
+    """An LRU cache that deep copies returned value"""
+    if not copy:
+        return functools.lru_cache(maxsize, typed)
+    def decorator(f):
+        cached_func = functools.lru_cache(maxsize, typed)(f)
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            return deepcopy(cached_func(*args, **kwargs))
+        return wrapper
+    return decorator
 
 
 def get_library_nearest_published_time(lib: str, timestamp: datetime) -> datetime:
@@ -146,7 +53,15 @@ def get_library_first_published_time(lib: str) -> datetime:
     return lib2versions[lib][0]["Published Timestamp"]
 
 
-def get_library_retention(lib, timestamp) -> float:
+def get_library_release_freq(lib: str, timestamp: datetime) -> int:
+    global lib2versions
+    t1 = get_library_first_published_time(lib)
+    t2 = get_library_nearest_published_time(lib, timestamp)
+    cnt = len([v for v in lib2versions[lib] if t1 <= v["Published Timestamp"] <= t2])
+    return (t2 - t1).days // max(1, cnt)
+
+
+def get_library_retention(lib: str, timestamp) -> float:
     global lib2adoptions
     global lib2removals
     add = len(lib2adoptions[lib].truncate(after=timestamp))
@@ -154,40 +69,177 @@ def get_library_retention(lib, timestamp) -> float:
     return max(0, 1 - rem / max(1, add))
 
 
-def get_library_flow(lib, timestamp) -> float:
+def get_library_flow(lib: str, timestamp) -> float:
     global lib2migrations
     ind = len([x for x in lib2migrations[lib] if x[1] == lib and x[3] < timestamp])
     outd = len([x for x in lib2migrations[lib] if x[0] == lib and x[3] < timestamp])
-    return (ind - outd) / max(1, outd + ind)
+    if ind == 0 and outd == 0:
+        return 0
+    return (ind - outd) / (outd + ind)
+
+
+def parse_version(version: str) -> str:
+    # ref: https://stackoverflow.com/questions/6618868
+    if match := re.search("(\d+(?:\.\d+)+[-.]?[a-zA-Z\d]*)", version):
+        return match.group(1)
+    else:
+        return ""
+
+
+@lru_cache(maxsize=32768, copy=True)
+def get_direct_dependencies(lib: str, version: str) -> dict:
+    global lib2versions
+
+    db = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).migration_helper
+    group_id, artifact_id = lib.split(":")[0], lib.split(":")[1]
+    res = []
+
+    # skip 1-4 if version is empty
+    if version != "":
+        # 1. exact matching
+        res = list(db.libraryVersionToDependency.find(
+            {"groupId": group_id, "artifactId": artifact_id, "version": version},
+            sort=[("version", pymongo.DESCENDING)]))
+        # 2. version*
+        if not res:
+            version_ = version
+            res = list(db.libraryVersionToDependency.find(
+                {"groupId": group_id, "artifactId": artifact_id, "version": {'$regex' :f"^{version_}"}},
+                sort=[("version", pymongo.DESCENDING)]))
+        # 3. remove dash
+        if not res and '-' in version:
+            version_= version.split('-')[0]
+            res = list(db.libraryVersionToDependency.find(
+                {"groupId": group_id, "artifactId": artifact_id, "version": {'$regex' :f"^{version_}"}},
+                sort=[("version", pymongo.DESCENDING)]))
+        # 4. remove last dot
+        if not res:
+            version_= '.'.join(version.split('.')[:-1])
+            # version_ may be an empty string?
+            if version_:
+                res = list(db.libraryVersionToDependency.find(
+                    {"groupId": group_id, "artifactId": artifact_id, "version": {'$regex' :f"^{version_}"}},
+                    sort=[("version", pymongo.DESCENDING)]))
+    # 5. find all
+    if not res:
+        res = list(db.libraryVersionToDependency.find({"groupId": group_id, "artifactId": artifact_id},
+            sort=[("version", pymongo.DESCENDING)]))
+    # 6. report error
+    if not res:
+        logging.error("%s %s", lib, version)
+        return {}
+    
+    res = res[0]
+    for i, dep in enumerate(res["dependencies"]):
+        for key in ["groupId", "artifactId", "version"]:
+            res["dependencies"][i][key] = dep[key].replace("${project.groupId}", group_id)
+            res["dependencies"][i][key] = dep[key].replace("${project.artifactId}", artifact_id)
+            res["dependencies"][i][key] = dep[key].replace("${project.version}", res["version"])
+        res["dependencies"][i]["version"] = parse_version(dep["version"])
+    return {x["groupId"] + ":" + x["artifactId"]: x["version"] for x in res["dependencies"]
+        if x["groupId"] + ":" + x["artifactId"] in lib2versions}
+
+
+def resolve_version(lib: str, ver: str) -> str:
+    global lib2versions
+    vernums = [str(x["Number"]) for x in lib2versions[lib]]
+    if ver in vernums:
+        return ver
+    perfixes = [v for v in vernums if v.startswith(ver)]
+    if len(perfixes) > 0:
+        return perfixes[-1]
+    if ver.split('-')[0] in vernums:
+        return ver.split('-')[0]
+    if parse_version(ver) in vernums:
+        return parse_version(ver)
+    if '.'.join(ver.split('.')[:-1]) in vernums:
+        return '.'.join(ver.split('.')[:-1])
+    return vernums[-1]
+
+
+def get_transitive_dependencies(lib: str, ver: str) -> dict:
+    deps = get_direct_dependencies(lib, ver)
+    while True:
+        new_deps = dict()
+        for lib2, ver2 in deps.items():
+            for lib3, ver3 in get_direct_dependencies(lib2, ver2).items():
+                if lib3 not in deps:
+                    new_deps[lib3] = ver3
+        if len(new_deps) == 0:
+            break
+        for dep2, ver2 in new_deps.items():
+            deps[dep2] = ver2
+    return deps
+
+
+def get_dependencies(lib: str) -> Tuple[dict, dict]:
+    db = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).migration_helper
+    ver2deps = defaultdict(dict) # version string (this lib) -> "groupId:artifactId" -> version string (that lib)
+    ver2transdeps = defaultdict(dict) # version string (this lib) -> "groupId:artifactId" -> version string (that lib)
+
+    group_id, artifact_id = lib.split(":")[0], lib.split(":")[1]
+    for item in db.libraryVersionToDependency.find({"groupId": group_id, "artifactId": artifact_id}):
+        ver2deps[item["version"]] = get_direct_dependencies(lib, item["version"])
+
+    for ver in ver2deps:
+        ver2transdeps[ver] = deepcopy(ver2deps[ver])
+        for lib2, ver2 in ver2deps[ver].items():
+            for lib3, ver3 in get_transitive_dependencies(lib2, ver2).items():
+                if lib3 not in ver2transdeps[ver]:
+                    ver2transdeps[ver][lib3] = ver3
+
+    logging.info("Finished getting dependencies for library %s", lib)
+    return lib, ver2deps, ver2transdeps
 
 
 def get_metrics_per_project(proj: str, proj_changes: pd.DataFrame) -> pd.DataFrame:
     global lib2vulnerabilities
     global lib2license
+    global lib2transdeps
 
-    proj_changes = proj_changes.copy()
-
-    metrics = defaultdict(list)
-    for change in proj_changes.itertuples():
-        if change.type == "add":
-            lib = change.lib2
-            metrics["response"].append(1)
-        else:
-            lib = change.lib1
-            metrics["response"].append(0)
-        metrics["last_release_interval"].append(
-            (change.timestamp - get_library_nearest_published_time(lib, change.timestamp)).days)
-        metrics["first_release_interval"].append(
-            (change.timestamp - get_library_first_published_time(lib)).days)
-        metrics["vulnerabilities"].append(
-            len([x for x in lib2vulnerabilities[lib] if x < change.timestamp]))
-        metrics["license"].append(lib2license[lib])
-        metrics["retention"].append(get_library_retention(lib, change.timestamp))
-        metrics["flow"].append(get_library_flow(lib, change.timestamp))
+    proj_changes = proj_changes.sort_values(by="timestamp").copy()
     
-    for metric, values in metrics.items():
-        proj_changes[metric] = values
-    return proj_changes
+    metrics = []
+    file2deps = defaultdict(dict) # pom.xml path -> list of dependencies
+    for commit, changes in proj_changes.groupby(by="commit"):
+        for change in changes.itertuples():
+            metric = change._asdict()
+            if "Index" in metric:
+                del metric["Index"]
+
+            if change.type == "add":
+                lib = change.lib2
+                metric["response"] = 1
+            elif change.type == "rem":
+                lib = change.lib1
+                metric["response"] = 0
+            else:
+                continue
+            metric["last_release_interval"] = (change.timestamp 
+                                               - get_library_nearest_published_time(lib, change.timestamp)).days
+            metric["first_release_interval"] = (change.timestamp - get_library_first_published_time(lib)).days
+            metric["release_freq"] = get_library_release_freq(lib, change.timestamp)
+            metric["vulnerabilities"] = len([x for x in lib2vulnerabilities[lib] if x < change.timestamp])
+            metric["license"] = lib2license[lib]
+            metric["retention"] = get_library_retention(lib, change.timestamp)
+            metric["flow"] = get_library_flow(lib, change.timestamp)
+            metric["in_other_file"] = any(lib in file2deps[f] for f in file2deps)
+            metric["in_trans_dep"] = any(lib in lib2transdeps[lib2][ver2] 
+                                        for lib2, ver2 in file2deps[change.file].items())
+
+            metrics.append(metric)
+
+        for change in changes.itertuples():
+            if change.type == "add":
+                file2deps[change.file][change.lib2] = change.ver2
+            elif change.type == "rem":
+                if change.lib1 in file2deps[change.file]:
+                    del file2deps[change.file][change.lib1]
+            else: # version change
+                file2deps[change.file][change.lib1] = change.ver2
+
+    logging.info("Finished getting metrics for project %s", proj)
+    return pd.DataFrame(metrics)
 
 
 def init_cache(libraries: pd.DataFrame, dep_changes: pd.DataFrame, migrations: pd.DataFrame):
@@ -197,14 +249,24 @@ def init_cache(libraries: pd.DataFrame, dep_changes: pd.DataFrame, migrations: p
     global lib2removals
     global lib2migrations
     global lib2license
+    global lib2deps
+    global lib2transdeps
 
-    logging.info("Caching library versions...")
+    dblio = pymongo.MongoClient(MONGO_URL, connect=False, maxPoolSize=200).libraries
+
+    logging.info("Caching library versions and license...")
     for lib in libraries.name:
         lib2versions[lib] = list(dblio.versions.find({"Platform": "Maven", "Project Name": lib}))
         for x in lib2versions[lib]:
             x["Published Timestamp"] = dateParser(x["Published Timestamp"]).replace(tzinfo=pytz.timezone("UTC"))
         lib2versions[lib] = sorted(lib2versions[lib], key=lambda x: x["Published Timestamp"])
         lib2license[lib] = dblio.projects.find_one({"Platform": "Maven", "Name": lib})["Licenses"]
+
+    logging.info("Caching library dependencies for %s versions...", sum(len(lib2versions[x]) for x in lib2versions))
+    with mp.Pool(mp.cpu_count() // 2) as pool:
+        for lib, ver2deps, ver2transdeps in pool.map(get_dependencies, list(libraries.name)):
+            lib2deps[lib] = ver2deps
+            lib2transdeps[lib] = ver2transdeps
 
     logging.info("Caching CVEs...")
     cve2time = defaultdict(list)
@@ -239,7 +301,6 @@ def init_cache(libraries: pd.DataFrame, dep_changes: pd.DataFrame, migrations: p
 
 def run():
     projects, libraries, migrations, rules, dep_changes = datautil.get_data()
-    dep_changes = dep_changes[(dep_changes.type == "add") | (dep_changes.type == "rem")]
     dep_changes.timestamp = pd.to_datetime(dep_changes.timestamp)
     migrations.startCommitTime = pd.to_datetime(migrations.startCommitTime, utc=True)
 
@@ -251,4 +312,3 @@ def run():
 
     logging.info("Exporting data...")
     dep_changes.to_csv(os.path.join(datautil.CACHE_DIR, "model_data.csv"), index=False)
-    
