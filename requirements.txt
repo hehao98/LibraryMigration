@@ -17,3 +17,4 @@ fake_useragent
 aiohttp
 nltk
 lxml
+scikit-learn
