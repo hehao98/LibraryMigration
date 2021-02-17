@@ -53,6 +53,11 @@ def get_library_first_published_time(lib: str) -> datetime:
     return lib2versions[lib][0]["Published Timestamp"]
 
 
+def get_library_last_published_time(lib: str) -> datetime:
+    global lib2versions
+    return lib2versions[lib][-1]["Published Timestamp"]
+
+
 def get_library_release_freq(lib: str, timestamp: datetime) -> int:
     global lib2versions
     t1 = get_library_first_published_time(lib)
@@ -202,6 +207,9 @@ def get_metrics_per_project(proj: str, proj_changes: pd.DataFrame) -> pd.DataFra
     metrics = []
     file2deps = defaultdict(dict) # pom.xml path -> list of dependencies
     for commit, changes in proj_changes.groupby(by="commit"):
+        f2removed_libs = defaultdict(set)
+        for change in changes[changes.type == "rem"].itertuples():
+            f2removed_libs[change.file].add(change.lib2)
         for change in changes.itertuples():
             metric = change._asdict()
             if "Index" in metric:
@@ -216,15 +224,17 @@ def get_metrics_per_project(proj: str, proj_changes: pd.DataFrame) -> pd.DataFra
             else:
                 continue
             metric["last_release_interval"] = (change.timestamp 
-                                               - get_library_nearest_published_time(lib, change.timestamp)).days
+                                               - get_library_last_published_time(lib)).days
             metric["first_release_interval"] = (change.timestamp - get_library_first_published_time(lib)).days
+            metric["nearest_release_inteveral"] = (change.timestamp 
+                                               - get_library_nearest_published_time(lib, change.timestamp)).days
             metric["release_freq"] = get_library_release_freq(lib, change.timestamp)
             metric["vulnerabilities"] = len([x for x in lib2vulnerabilities[lib] if x < change.timestamp])
             metric["license"] = lib2license[lib]
             metric["retention"] = get_library_retention(lib, change.timestamp)
             metric["flow"] = get_library_flow(lib, change.timestamp)
-            metric["in_other_file"] = any(lib in file2deps[f] for f in file2deps)
-            metric["in_trans_dep"] = any(lib in lib2transdeps[lib2][ver2] 
+            metric["in_other_file"] = any(lib in file2deps[f] for f in file2deps if f != change.file and lib not in f2removed_libs[f])
+            metric["in_trans_dep"] = any(lib in lib2transdeps[lib2][ver2] and lib not in file2deps[change.file]
                                         for lib2, ver2 in file2deps[change.file].items())
 
             metrics.append(metric)
