@@ -26,7 +26,9 @@ def get_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, 
     migrations = select_migrations()
     lib_names = set(libraries["name"])
     rules = select_rules(lib_names)
-    dep_changes = select_dependency_changes_all(lib_names) 
+    dep_changes = select_dependency_changes_all(lib_names)
+    migrations.startCommitTime = pd.to_datetime(migrations.startCommitTime, utc=True)
+    migrations.endCommitTime = pd.to_datetime(migrations.endCommitTime, utc=True)
     return projects, libraries, migrations, rules, dep_changes
 
 
@@ -173,6 +175,7 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
         lib_names = lib_names | set("")
         dep_changes = dep_changes[dep_changes.lib1.isin(lib_names) 
                                   | dep_changes.lib2.isin(lib_names)]
+    dep_changes.timestamp = pd.to_datetime(dep_changes.timestamp)
     return dep_changes
 
 
