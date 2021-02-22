@@ -11,8 +11,9 @@ Please configure to use a new Conda environment with Python 3.8 and [requirement
 
 ```shell script
 conda create -n LibraryMigration python=3.8
-conda install -c r r-irkernel r-essentials r-corrplot r-pscl
 conda activate LibraryMigration
+conda install -c r r-irkernel r-essentials r-corrplot r-pscl
+conda install -c conda-forge ipysankeywidget nodejs
 python -m pip install -r requirements.txt
 ```
 
