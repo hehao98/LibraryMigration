@@ -18,3 +18,5 @@ aiohttp
 nltk
 lxml
 scikit-learn
+plotly==4.14.3
+psutil

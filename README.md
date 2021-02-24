@@ -13,8 +13,12 @@ Please configure to use a new Conda environment with Python 3.8 and [requirement
 conda create -n LibraryMigration python=3.8
 conda activate LibraryMigration
 conda install -c r r-irkernel r-essentials r-corrplot r-pscl
-conda install -c conda-forge ipysankeywidget nodejs
+conda install nodejs -c conda-forge --repodata-fn=repodata.json
+conda install -c conda-forge ipysankeywidget
+conda install -c plotly plotly-orca
 python -m pip install -r requirements.txt
+jupyter labextension install jupyterlab-plotly@4.14.3
+jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.14.3
 ```
 
 Format all Python file like this
