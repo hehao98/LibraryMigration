@@ -1,0 +1,41 @@
+# MongoDB server quick setup
+# build or reload:
+# UID_GID="$(id -u):$(id -g)" docker-compose up --detach --build
+
+version: '3.7'
+
+services: 
+    # Data is recovered on first run
+    mongo:
+        image: mongo:latest
+        volumes:
+            # - ../dbdump/:/dbdump
+            # - ./dbinit/:/docker-entrypoint-initdb.d
+            - ../dbdata/:/data/db
+            # - you_create_volume:/data/db
+        user: "${UID_GID}"
+        restart: unless-stopped
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "1m"
+                max-file: "10"
+
+    jupyter:
+        # `I just realized that my context (actual folder) was too big`
+        # ref: https://github.com/docker/compose/issues/4396
+        # build: 
+        #     context: .
+        #     dockerfile: jupyter.dockerfile
+        image: 12f23eddde/jupyter-library-migration:v0.0.1
+        volumes:
+            - ../:/app
+        ports:
+            - "8848:8888"
+        restart: unless-stopped
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "1m"
+                max-file: "10"
+        

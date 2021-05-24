@@ -8,9 +8,22 @@ from datetime import datetime
 from collections import Counter, defaultdict
 from typing import List, Set, Tuple
 
+# modified: for docker support
+# read credentials from config
+import os
+import configparser
+
+config = configparser.ConfigParser()
+if (os.path.exists('config.ini')):
+    config.read('config.ini')
+else:
+    raise Exception('config.ini not found')
+    
+MONGO_URL='mongodb://' + config['MongoDB']['addr']
+MONGO_URL
 
 CACHE_DIR = "cache/"
-MONGO_URL = "mongodb://localhost:27017"
+
 if not os.path.exists(CACHE_DIR):
     os.mkdir(CACHE_DIR)
 
