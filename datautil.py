@@ -176,7 +176,7 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
         projects = select_projects_from_libraries_io()
         libraries = select_libraries_from_libraries_io()
         lib_names2 = set(libraries["name"])
-        with multiprocessing.Pool(32) as pool:
+        with multiprocessing.Pool(8) as pool:
             results = pool.starmap(
                 select_dependency_changes,
                 [(proj_name, lib_names2)

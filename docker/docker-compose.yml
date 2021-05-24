@@ -9,10 +9,10 @@ services:
     mongo:
         image: mongo:latest
         volumes:
-            # - ../dbdump/:/dbdump
-            # - ./dbinit/:/docker-entrypoint-initdb.d
+            # - ../dbdump/:/dbdump   # uncomment when restoring
+            # - ./dbinit/:/docker-entrypoint-initdb.d  # uncomment when restoring
             - ../dbdata/:/data/db
-            # - you_create_volume:/data/db
+            # - you_create_volume:/data/db  # uncomment on mac/win
         user: "${UID_GID}"
         restart: unless-stopped
         logging:
@@ -27,10 +27,12 @@ services:
         # build: 
         #     context: .
         #     dockerfile: jupyter.dockerfile
-        image: 12f23eddde/jupyter-library-migration:v0.0.1
+        image: 12f23eddde/jupyter-library-migration
         volumes:
             - ../:/app
         ports:
+            # note this setup allow arbitary code execution
+            # for security concerns, better set to `127.0.0.1:8848:8848`
             - "8848:8888"
         restart: unless-stopped
         logging:
