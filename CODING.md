@@ -7,7 +7,7 @@ The more compact dataset of legal library migration rules is [here](data/rules.x
 We use [get_issues.py](get_prs_by_commits.py) Python script to get issues and PRs [here](data/prs.xlsx).
 We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx).
 
-The final coding is done entirely manually in [this file](data/coding.xlsx).
+The final coding is done entirely manually in [this file](data/coding.xlsx), and the analysis of coding result is done in [this file](coding.ipynb).
 
 ## Thematic Analysis
 
@@ -82,7 +82,7 @@ I'm considering merging **Compatibility - Other Library**, **Compatibility - Env
 
 ## Final Themes
 
-TODO
+See the final paper.
 
 ## References
 

@@ -4,10 +4,7 @@ tokens.txt
 .vscode/
 cache/
 plots/
+dbdump
 .ipynb_checkpoints/
 __pycache__/
 .DS_Store
-tmp.xlsx
-data/cve.xml
-data/migration_changes*.csv
-data/migration_changes.csv

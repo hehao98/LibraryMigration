@@ -21,12 +21,6 @@ jupyter labextension install jupyterlab-plotly@4.14.3
 jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.14.3
 ```
 
-Format all Python file like this
-
-```shell script
-autopep8 --in-place --aggressive --max-line-length 119 *.py 
-```
-
 ## Data Preparation
 
 A dataset of library migration is already available [here](data/migrations.xlsx).
