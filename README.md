@@ -12,9 +12,7 @@ Please configure to use a new Conda environment with Python 3.8 and [requirement
 ```shell script
 conda create -n LibraryMigration python=3.8
 conda activate LibraryMigration
-conda install -c r r-irkernel r-essentials r-corrplot r-pscl
 conda install nodejs -c conda-forge --repodata-fn=repodata.json
-conda install -c conda-forge ipysankeywidget
 conda install -c plotly plotly-orca
 python -m pip install -r requirements.txt
 jupyter labextension install jupyterlab-plotly@4.14.3
@@ -29,3 +27,14 @@ We use [get_issues.py](get_prs_by_commits.py) Python script to get issues and PR
 We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx).
 
 The final coding is done entirely manually in [this file](data/coding.xlsx).
+
+## Docker
+
+Note: this may take hours to finish.
+
+```
+docker build -f dockerfile-mongodb -t mongodb-lm .
+docker build -f dockerfile-jupyter -t jupyter-lm .
+docker run --name mongodb-lm -d mongodb-lm --wiredTigerCacheSizeGB 2
+docker run -dp 12344:12344 jupyter-lm --network mongo
+```

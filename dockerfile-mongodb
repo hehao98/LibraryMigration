@@ -1,0 +1,6 @@
+# syntax=docker/dockerfile:1
+FROM mongo
+WORKDIR /LibraryMigration
+COPY dbdump dbdump
+COPY mongodb_restore.sh mongodb_restore.sh
+CMD mongod; bash mongodb_restore.sh

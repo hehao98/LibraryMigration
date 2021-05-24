@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1
+FROM continuumio/anaconda3
+WORKDIR /LibraryMigration
+COPY . .
+RUN rm -r dbdump
+RUN conda install python=3.8
+RUN conda install nodejs -c conda-forge --repodata-fn=repodata.json
+RUN conda install -c plotly plotly-orca
+RUN python -m pip install -r requirements.txt
+RUN jupyter labextension install jupyterlab-plotly@4.14.3
+RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.14.3
+CMD ["jupyter", "lab", "--port=12344", "--allow-root"]

@@ -4,7 +4,7 @@ tokens.txt
 .vscode/
 cache/
 plots/
-dbdump
+dbdump/
 .ipynb_checkpoints/
 __pycache__/
 .DS_Store
