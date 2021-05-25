@@ -10,6 +10,11 @@ if [[ ! -d $DIR ]]; then
     mkdir $DIR
 fi
 
+# create folder plots
+if [[ ! -d ../plots ]]; then
+    mkdir ../plots
+fi
+
 if [[ ! -w $DIR ]]; then 
     echo "You don't have write permissions to ${DIR}; MongoDB would exit on error"
     exit 1

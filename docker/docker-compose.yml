@@ -30,6 +30,7 @@ services:
         image: 12f23eddde/jupyter-library-migration
         volumes:
             - ../:/app
+        user: "${UID_GID}"
         ports:
             # note this setup allow arbitary code execution
             # for security concerns, better set to `127.0.0.1:8848:8848`
