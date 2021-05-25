@@ -30,7 +30,9 @@ services:
         image: 12f23eddde/jupyter-library-migration
         volumes:
             - ../:/app
-        user: "${UID_GID}"
+        # jupyter will create config file in '/.local', where normal user have no permission
+        # too tired to fix this
+        # user: "${UID_GID}"
         ports:
             # note this setup allow arbitary code execution
             # for security concerns, better set to `127.0.0.1:8848:8848`
