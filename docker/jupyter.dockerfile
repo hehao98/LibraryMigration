@@ -3,7 +3,7 @@ FROM continuumio/miniconda3
 
 RUN conda install python=3.8 && \
     conda install nodejs -c conda-forge --repodata-fn=repodata.json && \
-    conda install -c plotly plotly-orca
+    conda install -c plotly python-kaleido
 
 COPY requirements.txt /tmp/requirements.txt
 
@@ -11,6 +11,9 @@ RUN echo /tmp/requirements.txt && python -m pip install -r /tmp/requirements.txt
 
 RUN jupyter labextension install jupyterlab-plotly@4.14.3
 RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.14.3
+
+# fix `xvfb missing` on plotly
+# RUN apt-get update && apt-get install -y xvfb
 
 EXPOSE 8888
 
