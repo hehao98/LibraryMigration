@@ -10,7 +10,7 @@ from typing import List, Set, Tuple
 
 
 # For non-docker use, change to your url (e.g., localhost:27017)
-MONGO_URL = "mongodb://mongo:27017" 
+MONGO_URL = "mongodb://localhost:27017" 
 CACHE_DIR = "cache/"
 
 if not os.path.exists(CACHE_DIR):
