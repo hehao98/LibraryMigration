@@ -72,6 +72,7 @@ In this section, we explain files in this repository and how we obtained these f
 
 The process is summarized in the following figure.
 
+![](PROCESS.png)
 
 ### Some Ready-To-Use Dataset
 
