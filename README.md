@@ -62,17 +62,26 @@ If you run into any issues, we provide a more detailed setup and configuration g
 
 ## Replicating Results
 
-After the replication package is setup in any of the ways mentioned above, you should have a Jupyter Lab server instance running at `http://localhost:8888` (`http://localhost:8848`} if you use Docker, or some other URLs depending on your specific configuration). In Jupyter Lab, you should see the whole git repository folder, in which there are three notebooks: `rq1_prevalance.ipynb`, `rq2_trend.ipynb`, and `rq3_rationale.ipynb`. They correspond to the three RQs in the ESEC/FSE 2021 paper. You can directly see the plots and numbers used in our paper in the cells' output. For each notebook, you can start a Python kernel and run all cells, and then you should be able to replicate all the results in this notebook. The results should look identical or similar to the plots in the paper if it is working properly. For the migration graph, the automatically generated graph do not have a good layout, so we manually modified their layout by drag and dropping.
+After the replication package is setup in any of the ways mentioned above, you should have a Jupyter Lab server instance running at `http://localhost:8888` (`http://localhost:8848` if you use Docker, or some other URLs depending on your specific configuration). In Jupyter Lab, you should see the whole git repository folder, in which there are three notebooks: `rq1_prevalance.ipynb`, `rq2_trend.ipynb`, and `rq3_rationale.ipynb`. They correspond to the three RQs in the ESEC/FSE 2021 paper. You can directly see the plots and numbers used in our paper in the cells' output. For each notebook, you can start a Python kernel and run all cells, and then you should be able to replicate all the results in this notebook. The results should look identical or similar to the plots in the paper if it is working properly. For the migration graph, the automatically generated graph do not have a good layout, so we manually modified their layout by drag and dropping.
 
 ## Additional Documentation
 
 ### How We Obtained Files in this git Repository
 
-1. First, the 
+In this section, we explain files in this repository and how we obtained these files. However, the process described here requires significant amount of manual work, so this section cannot be used as replication instructions. Instead, it can serve as a reference if you want to reuse/repurpose the scripts and data in this repository for further studies. 
+
+The process is summarized in the following figure.
+
 
 ### Some Ready-To-Use Dataset
 
-A dataset of library migrations is available [here](data/migrations.xlsx). The more compact dataset of library migration rules is [here](data/rules.xlsx). We use [get_issues.py](get_prs_by_commits.py) Python script to get issues and PRs [here](data/prs.xlsx). We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx). The final coding is done entirely manually in [this file](data/coding.xlsx).
+We also have some ready-to-use dataset that is largely self-explanatory and can be easily used for further studies.
+
+First, we have a dataset of manually confirmed library migrations [here](data/migrations.xlsx) and a more compact dataset of library migration rules is [here](data/rules.xlsx). We use [get_issues.py](get_prs_by_commits.py) Python script to get the related issues and PRs [here](data/prs.xlsx). We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx). The final coding is done entirely manually in [this file](data/coding.xlsx).
+
+Second, we have the list of dependency changes, libraries, repositories, and migration graphs in the `cache/` folder in CSV or JSON format. These files should be largely self-explanatory.
+
+Finally, the MongoDB data dump used in the SANER 2021 paper contains a variety of preprocessed GitHub repository and Maven artifact data, with accompanying documentations in the `doc/` folder. Note that the `dbdump.zip` file provided in Zenodo does not contain all collections due to space limitations, but the provided collections are sufficient for replicating results in this paper.
 
 ## References
 

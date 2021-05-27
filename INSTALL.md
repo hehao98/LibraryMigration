@@ -2,7 +2,7 @@
 
 ## Replication Package Setup
 
-As mentioned in the previous section, we provide three different ways to replicate results in our paper. We will introduce them in detail in this section.
+We provide three different ways to replicate results in our paper. We will introduce them in detail in this section.
 
 If you do not use the VirtualBox VM image, please first clone this git repository (or download the repository archive from Zenodo). Create the following folder in this git repository, if they do not exist already: `mkdir plots`. Download and unzip `cache.zip`; then copy the extracted `cache` folder into the git repository folder. This `cache/` folder contains some precomputed data which can greatly speed up replication (otherwise re-running the notebooks will be very computation intensive).
 
