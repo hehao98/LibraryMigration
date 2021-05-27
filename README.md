@@ -78,7 +78,7 @@ The process is summarized in the following figure.
 
 We also have some ready-to-use dataset that is largely self-explanatory and can be easily used for further studies.
 
-First, we have a dataset of manually confirmed library migrations [here](data/migrations.xlsx) and a more compact dataset of library migration rules is [here](data/rules.xlsx). We use [get_issues.py](get_prs_by_commits.py) Python script to get the related issues and PRs [here](data/prs.xlsx). We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx). The final coding is done entirely manually in [this file](data/coding.xlsx).
+First, we have a dataset of manually confirmed library migrations [here](data/migrations.xlsx) and a more compact dataset of library migration rules is [here](data/rules.xlsx). We use [get_prs_by_commits.py](get_prs_by_commits.py) Python script to get the related issues and PRs [here](data/prs.xlsx). We then use [get_coding_data.py](get_coding_data.py) to aggregate coding data [here](data/coding_commits_prs.xlsx). The final coding is done entirely manually in [this file](data/coding.xlsx).
 
 Second, we have the list of dependency changes, libraries, repositories, and migration graphs in the `cache/` folder in CSV or JSON format. These files should be largely self-explanatory.
 
