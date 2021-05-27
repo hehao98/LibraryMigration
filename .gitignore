@@ -6,6 +6,7 @@ cache/
 plots/
 dbdump/
 dbdata/
+dbdata.zip
 .ipynb_checkpoints/
 __pycache__/
 .DS_Store

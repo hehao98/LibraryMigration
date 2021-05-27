@@ -8,20 +8,9 @@ from datetime import datetime
 from collections import Counter, defaultdict
 from typing import List, Set, Tuple
 
-# modified: for docker support
-# read credentials from config
-import os
-import configparser
 
-config = configparser.ConfigParser()
-if (os.path.exists('config.ini')):
-    config.read('config.ini')
-else:
-    raise Exception('config.ini not found')
-    
-MONGO_URL='mongodb://' + config['MongoDB']['addr']
-MONGO_URL
-
+# For non-docker use, change to your url (e.g., localhost:27017)
+MONGO_URL = "mongodb://localhost:27017" 
 CACHE_DIR = "cache/"
 
 if not os.path.exists(CACHE_DIR):
@@ -176,7 +165,7 @@ def select_dependency_changes_all(lib_names: set = None) -> pd.DataFrame:
         projects = select_projects_from_libraries_io()
         libraries = select_libraries_from_libraries_io()
         lib_names2 = set(libraries["name"])
-        with multiprocessing.Pool(8) as pool:
+        with multiprocessing.Pool(multiprocessing.cpu_count() // 2) as pool:
             results = pool.starmap(
                 select_dependency_changes,
                 [(proj_name, lib_names2)
