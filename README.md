@@ -48,7 +48,8 @@ For Plotly to function properly in `rq2_trend.ipynb`, you may also need to insta
 
 ### Using the VirtualBox VM Image
 
-The easiest way to replicate results in our paper is to use the VirtualBox VM Image. First, download the VM Image from [this Google Drive link]{TODO: Add Link} (we know it is non-persistent, so if it becomes unavailable, please use the other two ways for replication). After the download is finished, register and open this VM image. You should see a folder named `LibraryMigration` in the Desktop. Open this folder in Terminal and run `conda activate LibraryMigration && jupyter lab`. You should see a Jupyter Lab window automatically pop up, which you can use for replication.
+The easiest way to replicate results in our paper is to use the VirtualBox VM Image. First, download the VM Image from [this One Drive link](https://dreamok-my.sharepoint.com/:f:/g/personal/hehao_wowvv_com/EquUX-BJCjhOllxiNxA0ptkBDHTbDufze25oTK5SJOvlXg?e=bDJdUd) (we know it is non-persistent, so if it becomes unavailable, please use the other two ways for replication). After the download is finished, register and open this VM image. You should see a folder named `LibraryMigration` in the Desktop. Open this folder in Terminal and run `conda activate LibraryMigration && jupyter lab`. You should see a Jupyter Lab window automatically pop up, which you can use for replication.
+
 
 ### Using the Docker Image
 
