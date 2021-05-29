@@ -1,6 +1,6 @@
 # Replication Package for ESEC/FSE 2021 Paper "A Large-Scale Empirical Study of Java Library Migrations: Prevalence, Trends, and Rationales"
 
-This is the replication package for our ESEC/FSE 2021 paper *A Large-Scale Empirical Study on Java Library Migrations: Prevalence, Trends, and Rationales*.  It can be used to replicate all three research questions in the paper using our preprocessed and manually labeled data.  It consists of a git repository and a MongoDB database dump. By properly configuring a MongoDB database server and an Anaconda environment, a person can easily replicate the results in our paper by re-running the provided Jupyter Notebooks. We hope the provided scripts and dataset can be used to facilitate further research. The replication package have been permanently archived at https://doi.org/10.5281/zenodo.4816753.
+This is the replication package for our ESEC/FSE 2021 paper *A Large-Scale Empirical Study on Java Library Migrations: Prevalence, Trends, and Rationales*.  It can be used to replicate all three research questions in the paper using our preprocessed and manually labeled data.  It consists of a git repository and a MongoDB database dump. By properly configuring a MongoDB database server and an Anaconda environment, a person can easily replicate the results in our paper by re-running the provided Jupyter Notebooks. We hope the provided scripts and dataset can be used to facilitate further research. The replication package have been permanently archived at https://zenodo.org/record/4816752.
 
 ## Introduction
 
