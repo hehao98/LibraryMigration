@@ -1,0 +1,244 @@
+\documentclass[sigconf]{acmart}
+
+\usepackage{tabularx}
+\usepackage[skins]{tcolorbox}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{microtype}
+
+\newcommand{\Code}[1]{\begin{small}\texttt{#1}\end{small}}
+\newcommand*{\MyIndent}{\hspace*{0.3cm}}
+\newcommand{\Tag}[1]{\tcbox[on line,boxsep=0pt,boxrule=0.2pt,left=3pt,right=3pt,top=3pt,bottom=3pt]{\begin{small}\textsf{#1}\end{small}}}
+
+\makeatletter
+\newcommand{\verbatimfont}[1]{\renewcommand{\verbatim@font}{\ttfamily#1}}
+\makeatother
+
+\tcbset{
+  my box/.style={
+    enhanced,
+    colframe=#1!80,
+    colback=#1!10,
+    attach boxed title to top left={xshift=0.2cm, yshift=-0.2cm},
+    boxed title style={
+      colback=#1!80,https://www.overleaf.com/project/5f89068a748589000123c5a3
+      outer arc=0pt,
+      arc=0pt,
+      top=0pt,
+      bottom=0pt,
+    },
+  },
+}
+\newtcolorbox{result-rq}[1]{
+  my box=black,
+  title=#1,
+  boxrule=1.2pt,top=6pt,bottom=3.5pt,left=6pt,right=6pt
+}
+
+%%% If you see 'ACMUNKNOWN' in the 'setcopyright' statement below,
+%%% please first submit your publishing-rights agreement with ACM (follow link on submission page).
+%%% Then please update our instructions page and copy-and-paste the NEW commands into your article.
+%%% Please contact us in case of questions; allow up to 10 min for the system to propagate the information.
+%%%
+%%% The following is specific to ESEC/FSE '21 and the paper
+%%% 'A Large-Scale Empirical Study on Java Library Migrations: Prevalence, Trends, and Rationales'
+%%% by Hao He, Runzhi He, Haiqiao Gu, and Minghui Zhou.
+%%%
+\setcopyright{ACMUNKNOWN}
+\acmPrice{}
+\acmDOI{10.1145/3468264.3468571}
+\acmYear{2021}
+\copyrightyear{2021}
+\acmSubmissionID{fse21main-p271-p}
+\acmISBN{978-1-4503-8562-6/21/08}
+\acmConference[ESEC/FSE '21]{Proceedings of the 29th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering}{August 23--28, 2021}{Athens, Greece}
+\acmBooktitle{Proceedings of the 29th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering (ESEC/FSE '21), August 23--28, 2021, Athens, Greece}
+
+\begin{document}
+
+\title{Replication Package for "A Large-Scale Empirical Study on Java Library Migrations: Prevalence, Trends, and Rationales"}
+
+\author{Hao He}
+\orcid{0000-0001-8311-6559}
+\affiliation{
+  \institution{
+    Department of Computer Science and
+    Technology, Peking University, and Key Laboratory of High Confidence
+    Software Technologies, Ministry of Education}
+  \city{Beijing}
+  \country{China}
+}
+\email{heh@pku.edu.cn}
+
+\author{Runzhi He}
+\affiliation{
+  \institution{Department of Computer Science and
+    Technology, Peking University, and Key Laboratory of High Confidence
+    Software Technologies, Ministry of Education}
+  \city{Beijing}
+  \country{China}
+}
+\email{rzhe@pku.edu.cn}
+
+\author{Haiqiao Gu}
+\authornote{Works done at Peking University}
+\affiliation{
+  \institution{Department of Physics, Tsinghua University}
+  \city{Beijing}
+  \country{China}
+}
+\email{ghq17@mails.tsinghua.edu.cn}
+
+\author{Minghui Zhou}
+\authornote{Corresponding Author}
+\affiliation{
+  \institution{Department of Computer Science and
+    Technology, Peking University, and Key Laboratory of High Confidence
+    Software Technologies, Ministry of Education}
+  \city{Beijing}
+  \country{China}
+}
+\email{zhmh@pku.edu.cn}
+
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10011007.10011006.10011072</concept_id>
+       <concept_desc>Software and its engineering~Software libraries and repositories</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011074.10011111.10011696</concept_id>
+       <concept_desc>Software and its engineering~Maintaining software</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10011007.10011074.10011111.10011113</concept_id>
+       <concept_desc>Software and its engineering~Software evolution</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Software libraries and repositories}
+\ccsdesc[300]{Software and its engineering~Maintaining software}
+\ccsdesc[300]{Software and its engineering~Software evolution}
+
+\keywords{library migration, mining software repositories, evolution and maintenance, empirical software engineering}
+
+\begin{abstract}
+We introduce the replication package for our ESEC/FSE 2021 paper \textit{A Large-Scale Empirical Study on Java Library Migrations: Prevalence, Trends, and Rationales}. 
+It can be used to replicate all three research questions in the paper using our preprocessed and manually labeled data. 
+It consists of a git repository and a MongoDB database dump. By properly configuring a MongoDB database server and an Anaconda environment, a person can easily replicate the results in our paper by re-running the provided Jupyter Notebooks.
+We hope the provided scripts and dataset can be used to facilitate further research.
+The replication package is available at \url{https://doi.org/10.5281/zenodo.4816752}.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+With the rise of open-source software and package hosting platforms, reusing 3rd-party libraries has become a common practice.
+Due to risks including %, but not limited to 
+security vulnerabilities, lack of maintenance, unexpected failures, and license issues, a project may remove a used library and replace it with another library, which we call \textit{library migration}.
+Despite substantial research on dependency management, the understanding of how and why library migrations occur is still lacking. 
+Achieving this understanding may help practitioners optimize their library selection criteria, develop automated approaches to monitor dependencies, and provide migration suggestions for their libraries or software projects.
+To bridge this knowledge gap, we ask the following three research questions in our ESEC/FSE 2021 paper:
+
+\begin{itemize}
+    \item \textbf{RQ1:} How common are library migrations?
+    \item \textbf{RQ2:} How do migrations happen between libraries?
+    \item \textbf{RQ3:} What are the frequently mentioned reasons by developers when they conduct a library migration?
+\end{itemize}
+
+To answer the research questions, we reuse the MongoDB data from our previous paper~\cite{he2021multi}, compute dependency changes and library migrations as defined in the ESEC/FSE 2021 paper, and conduct manual labelling, exploratory data analysis, data visualization and thematic analysis to generate the presented results.
+The detailed results can be found in our paper.
+We implement all automated processing using Python in an Anaconda environment and we conduct all manual labelling using Microsoft Excel.
+We hope the scripts and dataset in this replication package can be leveraged to facilitate further studies in library migration and other related fields. 
+We intend to claim the \textbf{Artifacts Available} badge and the \textbf{Artifacts Evaluated - Reusable} badge for our replication package. 
+Our replication package has been permanently archived at Zenodo\footnote{\url{https://doi.org/10.5281/zenodo.4816752}} and it can also be accessed in this GitHub repository.\footnote{\url{https://github.com/hehao98/LibraryMigration}}
+
+\section{Required Skills and Environment}
+\label{sec:skill-env}
+
+We expect a person to have a reasonable amount of knowledge on git, Linux, Python development, data science, and MongoDB, in order to make the best use of this replication package.
+We provide several ways of replication for different usage scenarios and one can choose the way that suits his/her best.
+First, for reuse and further development, we recommend to manually setup the required environment in a commodity Linux server with at least 16 CPU Cores, 64GB memory, and 250GB storage, as instructed in Section \ref{sec:manual}.
+Second, for easy one-click replication, we provide a Ubuntu 20.04 VirtualBox VM Image in which the replication package has already been properly configured.
+This VM Image can be opened with VirtualBox 6.1 (or later versions) in any supported machine with at least 8GB of memory and 4 CPU Cores allocated for this VM (detailed instructions in Section~\ref{sec:vm}).
+Finally, for those who are familiar with Docker, we provide a Docker image which can be readily deployed and reused in a Linux machine with Docker environment.
+The hardware requirements for this Docker image is similar to that of the manual setup and the detailed instructions can be found in Section~\ref{sec:docker}.
+
+\section{Replication Package Setup}
+\label{sec:setup}
+
+As mentioned in Section~\ref{sec:skill-env}, we provide three different ways to replicate results in our paper.
+We will introduce them in detail in this section.
+If you do not use the VirtualBox VM image, please first clone the git repository from GitHub (or download the repository archive from Zenodo). 
+Create the following folder in this git repository, if they do not exist already: \Code{mkdir plots}. 
+Download and unzip \Code{cache.zip}; then copy the extracted \Code{cache/} folder into the git repository folder. 
+This \Code{cache/} folder contains some precomputed data which can greatly speed up replication (otherwise re-running the notebooks will be very computation intensive and may crash on low-memory machines).
+
+\subsection{Setup Environment Manually}
+\label{sec:manual}
+
+%First, download all files from Zenodo.
+%Unzip the git repository and create the following folders in the repository if they do not exist: \Code{mkdir plots \&\& mkdir cache}.
+For manual setup, please first configure to use a new Conda environment by executing the following commands step by step:
+
+\verbatimfont{\small}
+\begin{verbatim}
+conda create -n LibraryMigration python=3.8
+conda activate LibraryMigration
+conda install nodejs -c conda-forge --repodata-fn=repodata.json
+conda install -c plotly plotly-orca
+python -m pip install -r requirements.txt
+jupyter labextension install jupyterlab-plotly@4.14.3 \
+    @jupyter-widgets/jupyterlab-manager \
+    plotlywidget@4.14.3
+\end{verbatim}
+
+Then, unzip the \Code{dbdump.zip} and configure a latest MongoDB server listening at \Code{localhost:27017} without any authentication.
+Run \Code{cd dbdump \&\& bash mongodb\_restore.sh} to restore the necessary data in the \Code{migration\_helper} database (this may take some time to finish).
+You can check the schema of each collection using MongoDB Compass, and refer to the documentations if necessary.
+You may also use a different MongoDB URL but you have to modify \Code{mongodb\_restore.sh} and \Code{datautil.py} accordingly.
+After all the MongoDB collections have been restored, you can activate the \Code{LibraryMigration} environment and run \Code{jupyter lab} in the repository folder for replication.
+
+\subsection{Using VirtualBox VM Image}
+\label{sec:vm}
+The easiest way to replicate results in our paper is to use the VirtualBox VM Image. 
+Since it exceeds the maximum allowed file size (50GB) in Zenodo, we decide to provide this image using OneDrive.\footnote{The download link is \url{https://dreamok-my.sharepoint.com/:f:/g/personal/hehao_wowvv_com/EquUX-BJCjhOllxiNxA0ptkBDHTbDufze25oTK5SJOvlXg?e=bDJdUd}. If it becomes unavailable in the future, please use two other ways for replication.}
+First, download the VM image and install Oracle VirtualBox 6.1 or later versions.
+Next, register and open this VM image.
+You should see a folder named \Code{LibraryMigration} in the Desktop.
+Open this folder in Terminal and run \Code{conda activate LibraryMigration \&\& jupyter lab}.
+You should see a Jupyter Lab window automatically pop up, which you can use for replication.
+
+\subsection{Using Docker Image}
+\label{sec:docker}
+
+To replicate our results with Docker, please ensure that you already have \Code{docker}, \Code{docker-compose}, \Code{tar} and \Code{xz} installed in your Linux machine and you have access to Docker daemon (i.e. write permission to Docker socket).
+First, download all files from Zenodo. 
+Extract the git repository and \Code{dbdata.tar.xz}, then move the \Code{dbdata} folder to the root directory of the git repository folder.
+Then, by executing \Code{cd docker \&\& bash start.sh}, you should be able to set up a functional Docker container in a few minutes.
+After the Docker finishes pulling images and setting up containers, a Jupyter lab instance should be running at \Code{http://localhost:8848}. 
+If you are working on Linux with a desktop environment, a Jupyter Lab window should automatically pop up.
+Finally, change the MongoDB URL in \Code{datautil.py} to \Code{mongodb://mongo:27017} to use the MongoDB container.
+If you run into any issues, we provide a more detailed setup and configuration guide in our replication package (\Code{docker/README.md}). 
+Our Docker image may also work on Windows and macOS, but some special operations may be needed and we have only tested its functionality on Ubuntu 20.04.
+Please check the setup guide first when setting up our Docker image on Windows or macOS.
+
+\section{Replicating Results}
+
+After the replication package is set up using instructions from Section~\ref{sec:manual}, \ref{sec:vm}, or \ref{sec:docker}, you should have a Jupyter Lab server instance running at \Code{http://localhost:8888} (\Code{http://localhost:8848} if you use Docker, or some other URLs depending on your specific configuration).
+In Jupyter Lab, you should see the whole git repository folder, in which there are three notebooks: \Code{rq1\_prevalance.ipynb}, \Code{rq2\_trend.ipynb}, and \Code{rq3\_rationale.ipynb}.
+They correspond to the three RQs in the ESEC/FSE 2021 paper.
+You can directly see the plots and numbers used in our paper in the cells' output.
+For each notebook, you can start a Python kernel and run all cells, and then you should be able to replicate all the results in this notebook.
+Because of the space constraints, please refer to the documentations in our replication package for detailed explanations, such as repository file structure, the purpose of each file, MongoDB database schema, how we obtained the data and results, etc.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}
+\endinput
