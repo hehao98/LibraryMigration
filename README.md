@@ -37,7 +37,11 @@ conda create -n LibraryMigration python=3.8
 conda activate LibraryMigration
 conda install nodejs -c conda-forge --repodata-fn=repodata.json
 conda install -c plotly plotly-orca
-python -m pip install -r requirements.txt
+# We originally used requirements.txt as our dependency specification file,
+# but in a clean installation, the installed packages may be later versions and contain breaking changes,
+# so we created a lock file requirements-lock.txt to replicate our environment
+python -m pip install -r requirements-lock.txt
+# python -m pip install -r requirements.txt
 jupyter labextension install jupyterlab-plotly@4.14.3
 jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget@4.14.3
 ```
